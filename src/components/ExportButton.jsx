@@ -76,23 +76,23 @@ export default function ExportButton({ data, dashboardId, showFlyer = false, fly
     <div className="flex gap-2 flex-wrap">
       <button
         onClick={exportCSV}
-        className="bg-card border border-border flex items-center gap-2 px-4 py-2 text-xs font-semibold tracking-wide uppercase text-secondary hover:text-primary hover:bg-surface hover:border-accent transition-all"
+        className="glass-card flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-gray-300 hover:text-white text-xs font-medium transition-all"
       >
-        <Download size={14} /> {t('exportCSV')}
+        <Download size={13} /> {t('exportCSV')}
       </button>
       <button
         onClick={exportPDF}
         disabled={loading}
-        className="bg-card border border-border flex items-center gap-2 px-4 py-2 text-xs font-semibold tracking-wide uppercase text-secondary hover:text-primary hover:bg-surface hover:border-accent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="glass-card flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-gray-300 hover:text-white text-xs font-medium transition-all disabled:opacity-50"
       >
-        <Download size={14} /> {loading ? 'WAIT' : t('exportPDF')}
+        <Download size={13} /> {loading ? '…' : t('exportPDF')}
       </button>
       {showFlyer && flyerCoords && (
         <button
           onClick={openFlyer}
-          className="bg-accent/10 border border-accent flex items-center gap-2 px-4 py-2 text-xs font-semibold tracking-wide uppercase text-accent hover:bg-accent/20 transition-all"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20 text-xs font-medium transition-all border border-yellow-400/20"
         >
-          <FileText size={14} /> {t('downloadFlyer')} ({lang.toUpperCase()})
+          <FileText size={13} /> {t('downloadFlyer')} ({lang.toUpperCase()})
         </button>
       )}
     </div>

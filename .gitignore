@@ -4,7 +4,3 @@ dist/
 .DS_Store
 .vite/
 .idea/
-.claude/
-build_error.txt
-ai_changelog.md
-to_fix.txt

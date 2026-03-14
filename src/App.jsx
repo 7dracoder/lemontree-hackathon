@@ -7,13 +7,12 @@ import GovDashboard from './views/GovDashboard'
 import Navbar from './components/Navbar'
 import AIAssistant from './components/AIAssistant'
 import { LanguageProvider } from './context/LanguageContext'
-import { ThemeProvider } from './context/ThemeContext'
 
 function Dashboard() {
   const [params] = useSearchParams()
   const view = params.get('view')
   return (
-    <div className="min-h-screen bg-page text-primary transition-colors duration-300">
+    <div className="min-h-screen bg-gray-950 text-white">
       <Navbar />
       {view === 'foodbank' && <FoodBankDashboard />}
       {view === 'donor' && <DonorDashboard />}
@@ -26,7 +25,6 @@ function Dashboard() {
 
 export default function App() {
   return (
-    <ThemeProvider>
     <LanguageProvider>
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -34,6 +32,5 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </LanguageProvider>
-    </ThemeProvider>
   )
 }
