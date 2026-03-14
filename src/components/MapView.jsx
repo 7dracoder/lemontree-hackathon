@@ -1,12 +1,16 @@
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { getRiskLabel } from '../utils/mlScoring'
 import { useTranslation } from '../hooks/useTranslation'
 
-function FlyToCenter({ center, zoom }) {
+const NYC = [40.7128, -74.0060]
+
+function FlyToCenter({ center, zoom, shouldFly }) {
   const map = useMap()
   useEffect(() => {
-    map.flyTo(center, zoom, { duration: 1.2 })
+    if (shouldFly) {
+      map.flyTo(center, zoom, { duration: 1.2 })
+    }
   }, [center[0], center[1]])
   return null
 }
@@ -20,18 +24,18 @@ export default function MapView({ resources, clusterMap = {}, height = '400px' }
         valid.reduce((sum, r) => sum + r.latitude, 0) / valid.length,
         valid.reduce((sum, r) => sum + r.longitude, 0) / valid.length,
       ]
-    : [39.5, -98.35]
+    : NYC
 
-  const zoom = valid.length > 0 ? 10 : 4
+  const zoom = valid.length > 0 ? 10 : 12
 
   return (
     <div style={{ height }} className="border border-border">
-      <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={NYC} zoom={12} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-        <FlyToCenter center={center} zoom={zoom} />
+        <FlyToCenter center={center} zoom={zoom} shouldFly={false} />
         {valid.map(r => {
           const cluster = clusterMap[r.id]
           const { color } = getRiskLabel(r.riskScore ?? 0)
