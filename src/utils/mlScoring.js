@@ -24,9 +24,9 @@ export function computeRiskScore(resource) {
 }
 
 export function getRiskLabel(score) {
-  if (score >= 60) return { label: 'High Risk', color: '#ef4444', bg: 'bg-red-500/20', text: 'text-red-400' }
-  if (score >= 30) return { label: 'Medium Risk', color: '#f59e0b', bg: 'bg-yellow-500/20', text: 'text-yellow-400' }
-  return { label: 'Low Risk', color: '#22c55e', bg: 'bg-green-500/20', text: 'text-green-400' }
+  if (score >= 60) return { label: 'HIGH RISK', color: '#EF4444', border: 'border-status-error', text: 'text-status-error' }
+  if (score >= 30) return { label: 'MED RISK', color: '#FACC15', border: 'border-status-warning', text: 'text-status-warning' }
+  return { label: 'LOW RISK', color: '#22C55E', border: 'border-status-success', text: 'text-status-success' }
 }
 
 export function computeBarrierIndex(resource) {
