@@ -13,7 +13,7 @@ export const LANGUAGES = [
 
 export const translations = {
   en: {
-    appName: 'Lemontree Insights',
+    appName: 'Lemontree PantryHub',
     foodbank: '🏦 Food Bank',
     donor: '💛 Donor',
     government: '🏛️ Government',
