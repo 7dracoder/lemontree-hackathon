@@ -11,6 +11,7 @@ import MapView from '../components/MapView'
 import RiskBadge from '../components/RiskBadge'
 import ExportButton from '../components/ExportButton'
 import ResourceReviews from '../components/ResourceReviews'
+import SentimentPanel from '../components/SentimentPanel'
 
 const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6']
 
@@ -219,6 +220,7 @@ export default function FoodBankDashboard() {
                 )}
               </div>
               <ResourceReviews resource={selectedResource} />
+              <SentimentPanel resource={selectedResource} />
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-600 text-sm gap-2">
