@@ -62,36 +62,36 @@ export default function FilterBar({ filters, onChange, allData = [] }) {
   const hasActive = Object.entries(filters).some(([k, v]) => v && v !== 'all')
 
   return (
-    <div className="bg-card border border-border flex flex-wrap gap-3 items-center p-4 animate-fade-in shadow-xl shadow-black/50">
+    <div className="glass-card flex flex-wrap gap-3 items-center p-3 rounded-xl animate-fade-in">
       <select
         value={local.text}
         onChange={e => set('text', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer max-w-[200px]"
+        className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-2 border border-gray-700/50 focus:border-yellow-400/50 outline-none transition-all cursor-pointer max-w-[200px]"
       >
-        <option value="" className="bg-page text-primary">{t('searchByName')}</option>
+        <option value="">{t('searchByName')}</option>
         {nameSuggestions.map(n => (
-          <option key={n} value={n} className="bg-page text-primary">{n.length > 30 ? n.substring(0, 30) + '...' : n}</option>
+          <option key={n} value={n}>{n.length > 30 ? n.substring(0, 30) + '...' : n}</option>
         ))}
       </select>
 
       <select
         value={local.zipCode}
         onChange={e => set('zipCode', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer"
+        className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-2 border border-gray-700/50 focus:border-yellow-400/50 outline-none transition-all cursor-pointer"
       >
-        <option value="" className="bg-page text-primary">{t('searchByZip')}</option>
+        <option value="">{t('searchByZip')}</option>
         {zipSuggestions.map(z => (
-          <option key={z} value={z} className="bg-page text-primary">{z}</option>
+          <option key={z} value={z}>{z}</option>
         ))}
       </select>
 
       <select
         value={local.resourceType}
         onChange={e => set('resourceType', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer"
+        className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-2 border border-gray-700/50 focus:border-yellow-400/50 outline-none transition-all cursor-pointer"
       >
         {RESOURCE_TYPES.map(rt => (
-          <option key={rt.id} value={rt.id} className="bg-page text-primary">
+          <option key={rt.id} value={rt.id}>
             {lang === 'es' ? rt.es : rt.en}
           </option>
         ))}
@@ -100,31 +100,31 @@ export default function FilterBar({ filters, onChange, allData = [] }) {
       <select
         value={local.minRating}
         onChange={e => set('minRating', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer"
+        className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-2 border border-gray-700/50 focus:border-yellow-400/50 outline-none transition-all cursor-pointer"
       >
-        <option value="" className="bg-page text-primary">{t('minRating')}</option>
+        <option value="">{t('minRating')}</option>
         {[1, 2, 3, 4].map(n => (
-          <option key={n} value={n} className="bg-page text-primary">{'★'.repeat(n)}+ ({n}+)</option>
+          <option key={n} value={n}>{'★'.repeat(n)}+ ({n}+)</option>
         ))}
       </select>
 
       <select
         value={local.openByAppointment}
         onChange={e => set('openByAppointment', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer"
+        className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-2 border border-gray-700/50 focus:border-yellow-400/50 outline-none transition-all cursor-pointer"
       >
-        <option value="" className="bg-page text-primary">{t('allClients')}</option>
-        <option value="walkin" className="bg-page text-primary">{t('walkin')}</option>
-        <option value="appointment" className="bg-page text-primary">{t('appointment')}</option>
+        <option value="">{t('allClients')}</option>
+        <option value="walkin">{t('walkin')}</option>
+        <option value="appointment">{t('appointment')}</option>
       </select>
 
       {/* Apply Filters button */}
       <button
         onClick={applyFilters}
-        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold tracking-wide transition-all duration-200 uppercase border ${
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
           isDirty
-            ? 'bg-accent text-page border-accent hover:bg-accent/90'
-            : 'bg-page text-secondary border-border cursor-default'
+            ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300 shadow-lg shadow-yellow-400/20 scale-100'
+            : 'bg-yellow-400/20 text-yellow-400/60 cursor-default'
         }`}
       >
         <SlidersHorizontal size={14} />
@@ -134,9 +134,9 @@ export default function FilterBar({ filters, onChange, allData = [] }) {
       {hasActive && (
         <button
           onClick={clearFilters}
-          className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-tertiary hover:text-status-error transition-all px-3 py-2 border border-transparent hover:border-status-error/30 hover:bg-status-error/10 ml-auto"
+          className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition-all px-2.5 py-2 rounded-lg hover:bg-red-500/10"
         >
-          <X size={14} /> {t('clearFilters')}
+          <X size={12} /> {t('clearFilters')}
         </button>
       )}
     </div>
