@@ -92,8 +92,8 @@ export default function FoodBankDashboard() {
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-2 bg-gray-800 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-300 rounded-full shimmer" style={{ width: `${progress}%` }} />
+      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+        <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-gray-400 text-sm">{t('loading')} {progress}%</p>
     </div>
@@ -111,7 +111,6 @@ export default function FoodBankDashboard() {
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
@@ -127,7 +126,6 @@ export default function FoodBankDashboard() {
         })}
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="chart-card">
           <h3 className="text-sm font-semibold text-gray-300 mb-3">Rating Distribution</h3>
@@ -166,13 +164,11 @@ export default function FoodBankDashboard() {
         </div>
       </div>
 
-      {/* Map */}
       <div className="chart-card">
         <h3 className="text-sm font-semibold text-gray-300 mb-3">🗺️ {t('mapTitle')}</h3>
         <MapView resources={data} height="350px" />
       </div>
 
-      {/* Resource Table + Reviews Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card rounded-xl overflow-hidden">
           <div className="p-4 border-b border-gray-800/50">
@@ -210,7 +206,6 @@ export default function FoodBankDashboard() {
           </div>
         </div>
 
-        {/* Reviews side panel */}
         <div className="glass-card rounded-xl p-4 overflow-auto max-h-[420px]">
           {selectedResource ? (
             <>
