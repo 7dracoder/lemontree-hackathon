@@ -1,10 +1,8 @@
-const BASE = 'https://platform.foodhelpline.org'
-
+const BASE = ''
 // Parse superjson wire format — use raw.json directly (Option B from the API guide)
 function parse(raw) {
   return raw.json ?? raw
 }
-
 // Single-page fetch — used for location/text searches
 export async function fetchResources(params = {}) {
   const qs = new URLSearchParams()
@@ -15,15 +13,15 @@ export async function fetchResources(params = {}) {
   if (!res.ok) throw new Error(`API ${res.status}`)
   return parse(await res.json())
 }
-
-// Multi-page fetch with cursor pagination — caps at 500 to stay responsive
+// Multi-page fetch with skip/take pagination — loads all resources
 export async function fetchAllResources(params = {}, onProgress) {
-  let cursor
   let all = []
+  let skip = 0
+  const take = 100
   let total = null
-  do {
-    const qs = new URLSearchParams({ take: '100', ...params })
-    if (cursor) qs.set('cursor', cursor)
+
+  while (true) {
+    const qs = new URLSearchParams({ take: String(take), skip: String(skip), ...params })
     const res = await fetch(`${BASE}/api/resources?${qs}`)
     if (!res.ok) throw new Error(`API ${res.status}`)
     const data = parse(await res.json())
@@ -31,19 +29,18 @@ export async function fetchAllResources(params = {}, onProgress) {
     if (total === null) total = data.count ?? 0
     all = [...all, ...resources]
     if (onProgress) onProgress(all.length, total)
-    cursor = data.cursor
-    if (all.length >= Math.min(total, 500)) break
-  } while (cursor)
+    if (resources.length < take) break
+    skip += take
+  }
+
   return all
 }
-
 // Fetch a single resource by ID
 export async function fetchResourceById(id) {
   const res = await fetch(`${BASE}/api/resources/${id}`)
   if (!res.ok) throw new Error(`API ${res.status}`)
   return parse(await res.json())
 }
-
 // Lightweight GeoJSON markers for a bounding box (for map view)
 export async function fetchMarkersWithinBounds(swLng, swLat, neLng, neLat) {
   const qs = new URLSearchParams()
@@ -51,11 +48,9 @@ export async function fetchMarkersWithinBounds(swLng, swLat, neLng, neLat) {
   qs.append('corner', `${neLng},${neLat}`)
   const res = await fetch(`${BASE}/api/resources/markersWithinBounds?${qs}`)
   if (!res.ok) throw new Error(`API ${res.status}`)
-  return res.json() // GeoJSON FeatureCollection
+  return res.json()
 }
-
-// Returns URL to the print-ready PDF flyer (open in new tab or embed in iframe)
-// flyerLang: 'en' | 'es'
+// Returns URL to the print-ready PDF flyer
 export function getResourcePDFUrl(lat, lng, { locationName, flyerLang = 'en', ref } = {}) {
   const qs = new URLSearchParams({ lat: String(lat), lng: String(lng) })
   if (locationName) qs.set('locationName', locationName)
