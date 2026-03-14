@@ -10,7 +10,7 @@ import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import ExportButton from '../components/ExportButton'
 
-const COLORS = ['#facc15', '#22c55e', '#3b82f6', '#8b5cf6', '#f97316']
+const COLORS = ['#facc15', '#22c55e', '#3b82f6', '#8b5cf6', '#f97316', '#ec4899', '#14b8a6', '#ef4444', '#6366f1', '#84cc16']
 
 const RADIAN = Math.PI / 180
 const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }) => {
@@ -26,10 +26,10 @@ const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }) => {
 }
 
 const KPI_CONFIG = [
-  { icon: Users, accent: 'kpi-yellow', color: 'text-yellow-400' },
-  { icon: TrendingUp, accent: 'kpi-green', color: 'text-green-400' },
-  { icon: MessageSquare, accent: 'kpi-blue', color: 'text-blue-400' },
-  { icon: Star, accent: 'kpi-purple', color: 'text-purple-400' },
+  { icon: Users, accent: 'kpi-yellow', color: 'text-yellow-400', hex: '#FACC15' },
+  { icon: TrendingUp, accent: 'kpi-green', color: 'text-green-400', hex: '#4ADE80' },
+  { icon: MessageSquare, accent: 'kpi-blue', color: 'text-blue-400', hex: '#60A5FA' },
+  { icon: Star, accent: 'kpi-purple', color: 'text-purple-400', hex: '#C084FC' },
 ]
 
 export default function DonorDashboard() {
@@ -98,19 +98,21 @@ export default function DonorDashboard() {
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-2 bg-gray-800 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-300 rounded-full shimmer" style={{ width: `${progress}%` }} />
+      <div className="w-72 h-1 bg-card border border-border">
+        <div className="h-full bg-accent transition-all duration-300 shimmer" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-gray-400 text-sm">{t('loading')} {progress}%</p>
+      <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
     </div>
   )
 
   return (
-    <div id="donor-dashboard" className="p-6 space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div id="donor-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">💛 {t('donor')}</h1>
-          <p className="text-gray-500 text-sm mt-1">{t('donorHeadline')}</p>
+          <h1 className="text-4xl font-display font-bold text-primary tracking-tighter uppercase">
+            {t('donor')}
+          </h1>
+          <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('donorHeadline')}</p>
         </div>
         <ExportButton data={data} dashboardId="donor-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
@@ -122,12 +124,14 @@ export default function DonorDashboard() {
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} className={`glass-card rounded-xl p-4 ${kpi.accent} animate-fade-in-up stagger-${i + 1}`}>
-              <div className="flex items-center justify-between mb-2">
-                <Icon size={16} className={`${kpi.color} opacity-60`} />
+            <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
+              <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
+              <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
+                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
+                <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
-              <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium">{kpi.label}</div>
+              <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">{kpi.label}</div>
             </div>
           )
         })}
@@ -135,74 +139,77 @@ export default function DonorDashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="chart-card">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">Top 10 by {t('subscriptions')}</h3>
+        <div className="bg-card border border-border p-5">
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Top 10 by {t('subscriptions')}</h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Highest subscribed resources</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={topBySubscriptions} layout="vertical">
-              <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: '#6b7280', fontSize: 10 }} width={120} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'rgba(17,24,39,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }} />
-              <Bar dataKey="subs" fill="#facc15" radius={[0, 6, 6, 0]} />
+              <XAxis type="number" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fill: '#71717A', fontSize: 10 }} width={120} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Bar dataKey="subs" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-card">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">{t('subscriptions')} by {t('type')}</h3>
+        <div className="bg-card border border-border p-5">
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('subscriptions')} by {t('type')}</h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Distribution of subscriptions across resource types</p>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={renderLabel} labelLine={false}>
+              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={renderLabel} labelLine={false} stroke="none">
                 {typeDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280' }} />
+              <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: '#71717A', textTransform: 'uppercase' }} iconType="square" />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="chart-card">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">Rating Distribution (Resources)</h3>
+      <div className="bg-card border border-border p-5">
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Rating Distribution (Resources)</h3>
+        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources grouped by rating range</p>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={ratingBuckets}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis dataKey="range" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'rgba(17,24,39,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }} />
-            <Bar dataKey="count" fill="#22c55e" radius={[6, 6, 0, 0]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+            <XAxis dataKey="range" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+            <Bar dataKey="count" fill="#22c55e" radius={[0, 0, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="chart-card">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">🗺️ {t('mapTitle')}</h3>
+      <div className="bg-card border border-border p-5">
+        <h3 className="text-sm font-display font-bold text-primary mb-4 uppercase tracking-wide">🗺️ {t('mapTitle')}</h3>
         <MapView resources={data} height="360px" />
       </div>
 
-      {/* Resource list */}
-      <div className="glass-card rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-800/50">
-          <h3 className="text-sm font-semibold text-gray-300">Resource Impact Table</h3>
+      {/* Resource Table */}
+      <div className="bg-card border border-border overflow-hidden">
+        <div className="p-5 border-b border-border">
+          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Resource Impact Table</h3>
         </div>
         <div className="overflow-auto max-h-72">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-800/40 sticky top-0">
+          <table className="w-full text-xs">
+            <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
               <tr>
                 {[t('name'), t('city'), t('type'), t('subscriptions'), t('totalReviews'), t('ratingAverage')].map(h => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs text-gray-500 font-semibold uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {[...data].sort((a, b) => (b._count?.resourceSubscriptions ?? 0) - (a._count?.resourceSubscriptions ?? 0)).slice(0, 100).map(r => (
-                <tr key={r.id} className="table-row border-t border-gray-800/30">
-                  <td className="px-3 py-2.5 text-white truncate max-w-[180px] font-medium">{r.name ?? '—'}</td>
-                  <td className="px-3 py-2.5 text-gray-400">{r.city ?? '—'}, {r.state ?? ''}</td>
-                  <td className="px-3 py-2.5 text-gray-500 text-xs">
+                <tr key={r.id} className="hover:bg-surface transition-colors">
+                  <td className="px-4 py-3 text-primary truncate max-w-[180px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}, {r.state ?? ''}</td>
+                  <td className="px-4 py-3 text-tertiary tracking-wide text-[10px] uppercase">
                     {lang === 'es' ? (r.resourceType?.name_es ?? r.resourceType?.name) : r.resourceType?.name}
                   </td>
-                  <td className="px-3 py-2.5 text-green-400 font-semibold">{r._count?.resourceSubscriptions ?? 0}</td>
-                  <td className="px-3 py-2.5 text-blue-400">{r._count?.reviews ?? 0}</td>
-                  <td className="px-3 py-2.5 text-yellow-400">{r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : '—'}</td>
+                  <td className="px-4 py-3 text-green-400 font-semibold">{r._count?.resourceSubscriptions ?? 0}</td>
+                  <td className="px-4 py-3 text-blue-400">{r._count?.reviews ?? 0}</td>
+                  <td className="px-4 py-3 text-accent font-bold">{r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : '—'}</td>
                 </tr>
               ))}
             </tbody>

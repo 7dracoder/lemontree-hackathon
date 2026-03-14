@@ -3,27 +3,36 @@ import { useMemo, useState } from 'react'
 import { fetchResources } from '../api/lemontree'
 import { computeRiskScore } from '../utils/mlScoring'
 
-export function useResources(apiParams = {}) {
+export function useResources() {
   const [progress, setProgress] = useState(0)
 
   const { data: raw = [], isLoading, error } = useQuery({
-    queryKey: ['resources', JSON.stringify(apiParams)],
+    queryKey: ['resources-all'],
     queryFn: async () => {
-      let cursor
       let all = []
-      let total = null
-      do {
-        const data = await fetchResources({ take: 100, ...apiParams, ...(cursor ? { cursor } : {}) })
+      let skip = 0
+      const take = 100
+      const MAX = 2000
+
+      const firstPage = await fetchResources({ take, skip })
+      const total = Math.min(firstPage.count ?? 0, MAX)
+      const firstResources = firstPage.resources ?? []
+      all = [...all, ...firstResources]
+      setProgress(Math.min(100, Math.round((all.length / Math.max(total, 1)) * 100)))
+      skip += take
+
+      while (all.length < total) {
+        const data = await fetchResources({ take, skip })
         const resources = data.resources ?? []
-        if (total === null) total = data.count ?? 0
+        if (resources.length === 0) break
         all = [...all, ...resources]
-        setProgress(Math.round((all.length / Math.max(total, 1)) * 100))
-        cursor = data.cursor
-        if (all.length >= Math.min(total, 500)) break
-      } while (cursor)
+        setProgress(Math.min(100, Math.round((all.length / Math.max(total, 1)) * 100)))
+        skip += take
+      }
+
       return all
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: Infinity,
     retry: 2,
   })
 
@@ -36,20 +45,13 @@ export function useResources(apiParams = {}) {
 }
 
 export function useFilteredResources(filters = {}) {
-  // Pass search-friendly params to API; do fine-grained filtering client-side
-  const apiParams = useMemo(() => {
-    const p = {}
-    if (filters.zipCode?.trim()) p.location = filters.zipCode.trim()
-    if (filters.text?.trim()) p.text = filters.text.trim()
-    if (filters.resourceType && filters.resourceType !== 'all') p.resourceTypeId = filters.resourceType
-    p.sort = filters.sort ?? 'reviews'
-    return p
-  }, [filters.zipCode, filters.text, filters.resourceType, filters.sort])
-
-  const { data, isLoading, error, progress } = useResources(apiParams)
+  const { data, isLoading, error, progress } = useResources()
 
   const filtered = useMemo(() => {
     return data.filter(r => {
+      if (filters.zipCode?.trim() && r.zipCode !== filters.zipCode.trim()) return false
+      if (filters.text?.trim() && !r.name?.toLowerCase().includes(filters.text.toLowerCase())) return false
+      if (filters.resourceType && filters.resourceType !== 'all' && r.resourceTypeId !== filters.resourceType) return false
       if (filters.minRating && (r.ratingAverage ?? 0) < parseFloat(filters.minRating)) return false
       if (filters.openByAppointment === 'appointment' && !r.openByAppointment) return false
       if (filters.openByAppointment === 'walkin' && r.openByAppointment) return false
