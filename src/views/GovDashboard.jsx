@@ -84,8 +84,8 @@ export default function GovDashboard() {
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-1 bg-card border border-border">
-        <div className="h-full bg-accent transition-all duration-300 shimmer" style={{ width: `${progress}%` }} />
+      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+      <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
     </div>
