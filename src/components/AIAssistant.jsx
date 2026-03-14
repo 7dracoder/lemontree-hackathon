@@ -13,7 +13,7 @@ const SYSTEM_PROMPT = `You are a food access analyst in the Lemontree Insights D
 
 Three dashboard views: Food Bank (operational quality, satisfaction, wait times), Donor (household reach, resource coverage, donor impact), Government (supply-demand gaps, food deserts, high-barrier regions).
 
-Three tools: search_resources for location/type/availability queries. get_resource_details for a specific resource by ID. get_resource_reviews for visitor experience and sentiment. Always fetch real data before answering location or resource questions.
+Three tools: search_resources searches by the "text" field, which matches against resource names -- many resources include the city name, so searching "Charlotte" or "Gleaners" works well. get_resource_details fetches a specific resource by ID. get_resource_reviews fetches visitor reviews and sentiment. Always use a tool to fetch real data before answering resource-specific questions.
 
 ML scores per resource: Risk Score (0–100): <30 low, 30–59 medium, ≥60 high. Barrier Index (0–1): >0.6 high-barrier. Food Desert Clusters: Well Served → Moderate Access → Strained Resources → Food Desert. VADER Sentiment (−1 to 1): >0.5 positive, <−0.5 negative.
 
@@ -29,14 +29,12 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'search_resources',
-      description: 'Search food assistance resources by city, state, type, or availability. Use this for any location-based or discovery question.',
+      description: 'Search food resources by name. The text param matches resource names -- many include the city name so searching "Charlotte" or "Detroit" returns local resources. Filter by type with resourceTypeId.',
       parameters: {
         type: 'object',
         properties: {
-          city: { type: 'string', description: 'City name' },
-          state: { type: 'string', description: 'Two-letter US state code, e.g. TX, CA' },
-          resourceType: { type: 'string', description: 'Type of resource, e.g. Food Pantry, Soup Kitchen, Mobile Pantry' },
-          acceptingNewClients: { type: 'boolean', description: 'Filter to resources currently accepting new clients' },
+          text: { type: 'string', description: 'Search term matched against resource names. Can be a city name, org name, or keyword.' },
+          resourceTypeId: { type: 'string', description: 'Filter by type: FOOD_PANTRY or SOUP_KITCHEN' },
           take: { type: 'number', description: 'Number of results to return, default 10, max 50' },
         },
         required: [],
@@ -75,7 +73,10 @@ const TOOLS = [
 
 async function executeTool(name, args) {
   if (name === 'search_resources') {
-    const data = await fetchResources({ ...args, take: args.take ?? 10 })
+    const params = { take: args.take ?? 10 }
+    if (args.text) params.text = args.text
+    if (args.resourceTypeId) params.resourceTypeId = args.resourceTypeId
+    const data = await fetchResources(params)
     const resources = data.resources ?? (Array.isArray(data) ? data : [])
     return resources.map(r => ({
       id: r.id,
