@@ -1,27 +1,166 @@
 import { useState, useRef, useEffect } from 'react'
-import { MessageSquare, X, Send, Bot, Sparkles } from 'lucide-react'
+import { MessageSquare, X, Send, Sparkles } from 'lucide-react'
 import OpenAI from 'openai'
-
-const SYSTEM_PROMPT = `You are an AI assistant embedded in the Lemontree Food Access Insights Dashboard.
-Lemontree is a nonprofit that connects 350,000+ households to free food resources across the US.
-The dashboard has 3 views:
-- Food Bank View: satisfaction ratings, wait times, access barriers, service disruptions per pantry
-- Donor View: households reached (subscriptions), resource coverage maps, offering breakdowns
-- Government View: supply vs demand gaps, food desert clustering, access barrier index per region
-The data comes from platform.foodhelpline.org/api/resources — 14,169 food resources nationwide.
-Key fields: ratingAverage, waitTimeMinutesAverage, acceptingNewClients, confidence, flags, tags, occurrenceSkipRanges, _count.reviews, _count.resourceSubscriptions.
-ML models: Risk Score (0-100), K-Means Food Desert Clustering (4 zones), Access Barrier Index (0-1).
-Help users understand charts, interpret data, and draw insights. Be concise and practical.`
+import { fetchResources, fetchResourceById, fetchResourceReviews } from '../api/lemontree'
+import { analyzeReviews } from '../utils/sentiment'
 
 const client = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY ?? '',
   dangerouslyAllowBrowser: true,
 })
 
+const SYSTEM_PROMPT = `You are a food access analyst in the Lemontree Insights Dashboard, used by food banks, donors, and government agencies to understand US food assistance resources.
+
+Three dashboard views: Food Bank (operational quality, satisfaction, wait times), Donor (household reach, resource coverage, donor impact), Government (supply-demand gaps, food deserts, high-barrier regions).
+
+Three tools: search_resources for location/type/availability queries. get_resource_details for a specific resource by ID. get_resource_reviews for visitor experience and sentiment. Always fetch real data before answering location or resource questions.
+
+ML scores per resource: Risk Score (0–100): <30 low, 30–59 medium, ≥60 high. Barrier Index (0–1): >0.6 high-barrier. Food Desert Clusters: Well Served → Moderate Access → Strained Resources → Food Desert. VADER Sentiment (−1 to 1): >0.5 positive, <−0.5 negative.
+
+When referencing data from tool results, cite the relevant field names so the user can verify. 
+Give actionable recommendations where possible. 
+
+Do not use markdown or em dashes. 
+
+`;
+
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'search_resources',
+      description: 'Search food assistance resources by city, state, type, or availability. Use this for any location-based or discovery question.',
+      parameters: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'City name' },
+          state: { type: 'string', description: 'Two-letter US state code, e.g. TX, CA' },
+          resourceType: { type: 'string', description: 'Type of resource, e.g. Food Pantry, Soup Kitchen, Mobile Pantry' },
+          acceptingNewClients: { type: 'boolean', description: 'Filter to resources currently accepting new clients' },
+          take: { type: 'number', description: 'Number of results to return, default 10, max 50' },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_resource_details',
+      description: 'Get full details of a specific food resource by its ID, including hours, tags, contacts, and ML risk/barrier scores.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The resource ID' },
+        },
+        required: ['id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_resource_reviews',
+      description: 'Get visitor reviews and VADER sentiment analysis for a specific resource by its ID.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The resource ID' },
+        },
+        required: ['id'],
+      },
+    },
+  },
+]
+
+async function executeTool(name, args) {
+  if (name === 'search_resources') {
+    const data = await fetchResources({ ...args, take: args.take ?? 10 })
+    const resources = data.resources ?? (Array.isArray(data) ? data : [])
+    return resources.map(r => ({
+      id: r.id,
+      name: r.name,
+      city: r.city,
+      state: r.state,
+      ratingAverage: r.ratingAverage,
+      acceptingNewClients: r.acceptingNewClients,
+      reviewCount: r._count?.reviews ?? 0,
+      resourceType: r.resourceType?.name,
+    }))
+  }
+
+  if (name === 'get_resource_details') {
+    return await fetchResourceById(args.id)
+  }
+
+  if (name === 'get_resource_reviews') {
+    const reviews = await fetchResourceReviews(args.id)
+    const sentiment = analyzeReviews(reviews)
+    return {
+      reviews: reviews.slice(0, 10),
+      sentiment: {
+        compound: sentiment.compound,
+        pos: sentiment.pos,
+        neg: sentiment.neg,
+        neu: sentiment.neu,
+        count: sentiment.count,
+      },
+    }
+  }
+
+  return { error: `Unknown tool: ${name}` }
+}
+
+async function runAgent(conversationMessages) {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...conversationMessages.slice(-10),
+  ]
+
+  for (let i = 0; i < 5; i++) {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 500,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      messages,
+    })
+
+    const choice = response.choices[0]
+
+    if (choice.finish_reason === 'stop') {
+      return choice.message.content
+    }
+
+    if (choice.finish_reason === 'tool_calls') {
+      messages.push(choice.message)
+      for (const toolCall of choice.message.tool_calls) {
+        let result
+        try {
+          const args = JSON.parse(toolCall.function.arguments)
+          result = await executeTool(toolCall.function.name, args)
+        } catch (e) {
+          result = { error: e.message }
+        }
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result).slice(0, 3000),
+        })
+      }
+      continue
+    }
+
+    return choice.message.content ?? 'No response.'
+  }
+
+  return 'I was unable to complete that request after several attempts.'
+}
+
 export default function AIAssistant() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! I'm your Lemontree data assistant 🍋 Ask me anything about the dashboard, charts, or insights." },
+    { role: 'assistant', content: "Hi! I'm your Lemontree data assistant. Ask me about food resources in any city, a specific pantry's details, or what visitors have said about a location." },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,14 +177,10 @@ export default function AIAssistant() {
     setInput('')
     setLoading(true)
     try {
-      const res = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages.slice(-8), userMsg],
-        max_tokens: 400,
-      })
-      setMessages(prev => [...prev, { role: 'assistant', content: res.choices[0].message.content }])
+      const content = await runAgent([...messages, userMsg])
+      setMessages(prev => [...prev, { role: 'assistant', content }])
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ Error: ${e.message}. Check your VITE_OPENAI_API_KEY in .env` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}. Check your VITE_OPENAI_API_KEY in .env` }])
     } finally {
       setLoading(false)
     }
@@ -53,7 +188,6 @@ export default function AIAssistant() {
 
   return (
     <>
-      {/* FAB Button */}
       <button
         onClick={() => setOpen(o => !o)}
         className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
@@ -67,7 +201,6 @@ export default function AIAssistant() {
 
       {open && (
         <div className="fixed bottom-24 right-6 z-50 w-96 max-h-[520px] flex flex-col glass rounded-2xl shadow-2xl shadow-black/40 animate-slide-right overflow-hidden">
-          {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-gray-800/80 to-gray-800/40 border-b border-gray-700/50">
             <div className="w-7 h-7 rounded-full bg-yellow-400/20 flex items-center justify-center">
               <Sparkles size={14} className="text-yellow-400" />
@@ -78,7 +211,6 @@ export default function AIAssistant() {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
@@ -103,7 +235,6 @@ export default function AIAssistant() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
           <div className="flex gap-2 p-3 border-t border-gray-800/50">
             <input
               type="text"

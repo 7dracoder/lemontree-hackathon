@@ -50,7 +50,8 @@ export default function SentimentPanel({ resource }) {
     setReport('')
     try {
       const sampleTexts = analysis.scored.slice(0, 5).map(r => `- "${r.text}"`).join('\n')
-      const prompt = `You are a food access analyst. A community food pantry called "${resource.name}" in ${resource.city}, ${resource.state} has the following sentiment profile from ${analysis.count} visitor reviews:
+      const prompt = `You are a food access analyst. A community food pantry called "${resource.name}" in 
+      ${resource.city}, ${resource.state} has the following sentiment profile from ${analysis.count} visitor reviews:
 
 VADER Scores:
 - Compound: ${analysis.compound.toFixed(3)} (range -1 to 1)
@@ -62,7 +63,12 @@ VADER Scores:
 Sample review excerpts:
 ${sampleTexts}
 
-Write a concise 3-paragraph report for a food bank manager covering: (1) overall visitor sentiment, (2) specific strengths and issues raised, (3) one actionable recommendation to improve service quality. Be practical and empathetic.`
+Write a concise 2-paragraph report for a food bank manager covering: 
+- overall visitor sentiment
+- specific strengths and issues raised, 
+- one actionable recommendation to improve service quality. Be practical and empathetic. 
+
+No markdown.`
 
       const res = await client.chat.completions.create({
         model: 'gpt-4o-mini',
