@@ -50,6 +50,27 @@ export async function fetchMarkersWithinBounds(swLng, swLat, neLng, neLat) {
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
 }
+// Fetch reviews for a resource — tries the live API, falls back to seeded data
+let _seededReviews = null
+async function getSeededReviews() {
+  if (!_seededReviews) {
+    const res = await fetch('/seeded_reviews.json')
+    _seededReviews = await res.json()
+  }
+  return _seededReviews
+}
+export async function fetchResourceReviews(id) {
+  try {
+    const res = await fetch(`${BASE}/api/resources/${id}/reviews`)
+    if (res.ok) {
+      const data = parse(await res.json())
+      return Array.isArray(data) ? data : data.reviews ?? []
+    }
+  } catch (_) {}
+  // Fall back to seeded data
+  const seeded = await getSeededReviews()
+  return seeded[String(id)] ?? []
+}
 // Returns URL to the print-ready PDF flyer
 export function getResourcePDFUrl(lat, lng, { locationName, flyerLang = 'en', ref } = {}) {
   const qs = new URLSearchParams({ lat: String(lat), lng: String(lng) })
