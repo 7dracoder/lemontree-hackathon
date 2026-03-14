@@ -84,8 +84,8 @@ export default function GovDashboard() {
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-2 bg-gray-800 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-300 rounded-full shimmer" style={{ width: `${progress}%` }} />
+      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+        <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-gray-400 text-sm">{t('loading')} {progress}%</p>
     </div>
@@ -103,7 +103,6 @@ export default function GovDashboard() {
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
@@ -119,7 +118,6 @@ export default function GovDashboard() {
         })}
       </div>
 
-      {/* Cluster Distribution */}
       <div className="chart-card">
         <h3 className="text-sm font-semibold text-gray-300 mb-1">Food Desert {t('cluster')} Distribution</h3>
         <p className="text-xs text-gray-600 mb-4">Resources clustered by location, rating, and access barriers</p>
@@ -137,7 +135,6 @@ export default function GovDashboard() {
         </div>
       </div>
 
-      {/* Charts row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="chart-card">
           <h3 className="text-sm font-semibold text-gray-300 mb-1">{t('barrierIndex')} by State</h3>
@@ -170,7 +167,6 @@ export default function GovDashboard() {
         </div>
       </div>
 
-      {/* Map with cluster colors */}
       <div className="chart-card">
         <h3 className="text-sm font-semibold text-gray-300 mb-1">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
         <div className="flex gap-4 mb-3 flex-wrap">
@@ -184,7 +180,6 @@ export default function GovDashboard() {
         <MapView resources={data} clusterMap={clusterMap} height="380px" />
       </div>
 
-      {/* Resource detail table */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-300">High-Priority Resources</h3>
