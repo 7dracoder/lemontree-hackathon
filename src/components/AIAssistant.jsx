@@ -13,14 +13,14 @@ const SYSTEM_PROMPT = `You are a food access analyst in the Lemontree Insights D
 
 Three dashboard views: Food Bank (operational quality, satisfaction, wait times), Donor (household reach, resource coverage, donor impact), Government (supply-demand gaps, food deserts, high-barrier regions).
 
-Three tools: search_resources searches by the "text" field, which matches against resource names -- many resources include the city name, so searching "Charlotte" or "Gleaners" works well. get_resource_details fetches a specific resource by ID. get_resource_reviews fetches visitor reviews and sentiment. Always use a tool to fetch real data before answering resource-specific questions.
+Three tools: search_resources supports lat/lng for geographic queries and text for name/org searches. get_resource_details fetches a specific resource by ID. get_resource_reviews fetches visitor reviews and sentiment. Always use a tool before answering resource-specific questions.
 
 ML scores per resource: Risk Score (0–100): <30 low, 30–59 medium, ≥60 high. Barrier Index (0–1): >0.6 high-barrier. Food Desert Clusters: Well Served → Moderate Access → Strained Resources → Food Desert. VADER Sentiment (−1 to 1): >0.5 positive, <−0.5 negative.
 
 When referencing data from tool results, cite the relevant field names so the user can verify. 
 Give actionable recommendations where possible. 
 
-Do not use markdown or em dashes. 
+Do not use markdown or em dashes. Speak in typical prose. 
 
 `;
 
@@ -29,11 +29,13 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'search_resources',
-      description: 'Search food resources by name. The text param matches resource names -- many include the city name so searching "Charlotte" or "Detroit" returns local resources. Filter by type with resourceTypeId.',
+      description: 'Search food assistance resources. Use lat/lng for geographic searches (preferred for city queries -- provide approximate city center coordinates). Use text to search by resource or organization name. Combine both for best results.',
       parameters: {
         type: 'object',
         properties: {
-          text: { type: 'string', description: 'Search term matched against resource names. Can be a city name, org name, or keyword.' },
+          lat: { type: 'number', description: 'Latitude of city or location center, e.g. 35.2271 for Charlotte NC' },
+          lng: { type: 'number', description: 'Longitude of city or location center, e.g. -80.8431 for Charlotte NC' },
+          text: { type: 'string', description: 'Search by resource or organization name' },
           resourceTypeId: { type: 'string', description: 'Filter by type: FOOD_PANTRY or SOUP_KITCHEN' },
           take: { type: 'number', description: 'Number of results to return, default 10, max 50' },
         },
@@ -74,6 +76,8 @@ const TOOLS = [
 async function executeTool(name, args) {
   if (name === 'search_resources') {
     const params = { take: args.take ?? 10 }
+    if (args.lat != null) params.lat = args.lat
+    if (args.lng != null) params.lng = args.lng
     if (args.text) params.text = args.text
     if (args.resourceTypeId) params.resourceTypeId = args.resourceTypeId
     const data = await fetchResources(params)
