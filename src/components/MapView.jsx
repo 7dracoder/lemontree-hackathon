@@ -1,6 +1,6 @@
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet'
 import { useEffect, useRef } from 'react'
-import { getRiskLabel } from '../utils/mlScoring'
+import { getRiskLabel, isClosedToday } from '../utils/mlScoring'
 import { useTranslation } from '../hooks/useTranslation'
 
 const NYC = [40.7128, -74.0060]
@@ -62,6 +62,7 @@ export default function MapView({ resources, clusterMap = {}, height = '400px' }
                   {cluster?.label && <span className="text-status-warning">📍 {cluster.label}</span>}
                   {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
                   {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
+                  {isClosedToday(r) ? <span><br />🔒 Closed Today</span> : ''}
                 </div>
               </Tooltip>
             </CircleMarker>
