@@ -9,7 +9,7 @@ export default function MapView({ resources, clusterMap = {}, height = '400px' }
   const zoom = valid.length > 0 ? 10 : 4
 
   return (
-    <div style={{ height }} className="rounded-xl overflow-hidden border border-gray-800">
+    <div style={{ height }} className="border border-border">
       <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -34,14 +34,14 @@ export default function MapView({ resources, clusterMap = {}, height = '400px' }
               pathOptions={{ fillColor, color: fillColor, fillOpacity: 0.8, weight: 1 }}
             >
               <Tooltip>
-                <div style={{ fontSize: 12, lineHeight: 1.5, maxWidth: 200 }}>
-                  <strong>{r.name ?? 'Unknown'}</strong><br />
-                  {typeName} · {r.city}, {r.state}<br />
+                <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
+                  <strong className="text-accent">{r.name ?? 'Unknown'}</strong><br />
+                  <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
                   {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
                   {r._count?.reviews ? ` (${r._count.reviews} ${t('reviews').toLowerCase()})` : ''}<br />
-                  {cluster?.label && <span>📍 {cluster.label}</span>}
+                  {cluster?.label && <span className="text-status-warning">📍 {cluster.label}</span>}
                   {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
-                  {r.openByAppointment ? <span><br />📅 {t('openByAppointment')}</span> : ''}
+                  {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
                 </div>
               </Tooltip>
             </CircleMarker>

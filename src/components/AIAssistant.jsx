@@ -195,34 +195,34 @@ export default function AIAssistant() {
     <>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
+        className={`fixed bottom-6 right-6 z-50 w-12 h-12 flex items-center justify-center transition-all duration-200 border ${
           open
-            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 rotate-90'
-            : 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900 hover:shadow-yellow-400/30 hover:shadow-2xl hover:scale-105'
+            ? 'bg-page text-secondary border-border hover:bg-surface hover:text-primary'
+            : 'bg-accent text-page border-accent hover:bg-accent/90 shadow-none'
         }`}
       >
         {open ? <X size={20} /> : <MessageSquare size={20} />}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 max-h-[520px] flex flex-col glass rounded-2xl shadow-2xl shadow-black/40 animate-slide-right overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-gray-800/80 to-gray-800/40 border-b border-gray-700/50">
-            <div className="w-7 h-7 rounded-full bg-yellow-400/20 flex items-center justify-center">
-              <Sparkles size={14} className="text-yellow-400" />
+        <div className="fixed bottom-24 right-6 z-50 w-[400px] max-h-[520px] flex flex-col bg-card border border-border shadow-2xl shadow-black/60 animate-fade-in-up">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-page">
+            <div className="w-8 h-8 bg-accent/10 border border-accent flex items-center justify-center">
+              <Sparkles size={14} className="text-accent" />
             </div>
             <div>
-              <span className="font-semibold text-sm text-white block leading-tight">Lemontree AI</span>
-              <span className="text-[10px] text-green-400 font-medium">● Online</span>
+              <span className="font-display font-semibold text-sm tracking-wide uppercase text-primary block leading-tight">Lemontree AI</span>
+              <span className="text-[10px] text-status-success font-semibold tracking-wider uppercase">● SYS_ONLINE</span>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[80%] text-sm px-3.5 py-2.5 leading-relaxed ${
+                <div className={`max-w-[85%] text-xs tracking-wide px-4 py-3 leading-relaxed border ${
                   m.role === 'user'
-                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-500 text-gray-900 font-medium rounded-2xl rounded-br-md'
-                    : 'bg-gray-800/80 text-gray-200 rounded-2xl rounded-bl-md border border-gray-700/30'
+                    ? 'bg-accent/10 border-accent text-accent'
+                    : 'bg-page border-border text-primary'
                 }`}>
                   {m.content}
                 </div>
@@ -230,7 +230,7 @@ export default function AIAssistant() {
             ))}
             {loading && (
               <div className="flex justify-start animate-fade-in">
-                <div className="bg-gray-800/80 text-gray-400 text-sm px-4 py-3 rounded-2xl rounded-bl-md border border-gray-700/30 flex gap-1.5">
+                <div className="bg-page border border-border px-4 py-3 flex gap-2">
                   <span className="typing-dot" />
                   <span className="typing-dot" />
                   <span className="typing-dot" />
@@ -240,21 +240,21 @@ export default function AIAssistant() {
             <div ref={bottomRef} />
           </div>
 
-          <div className="flex gap-2 p-3 border-t border-gray-800/50">
+          <div className="flex gap-2 p-4 border-t border-border bg-page">
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder="Ask about the data..."
-              className="flex-1 bg-gray-800/50 border border-gray-700/50 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-yellow-400/50 placeholder-gray-600 transition-all"
+              placeholder="ENTER QUERY..."
+              className="flex-1 bg-card border border-border text-xs tracking-wide uppercase text-primary px-4 py-3 focus:outline-none focus:border-accent placeholder:text-tertiary transition-colors"
             />
             <button
               onClick={send}
               disabled={loading || !input.trim()}
-              className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-gray-900 rounded-xl flex items-center justify-center disabled:opacity-30 transition-all duration-200 disabled:cursor-not-allowed"
+              className="w-12 h-12 bg-accent text-page hover:bg-accent/90 border border-accent flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send size={15} />
+              <Send size={16} />
             </button>
           </div>
         </div>

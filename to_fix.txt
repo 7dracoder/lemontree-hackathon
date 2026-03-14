@@ -1,0 +1,7 @@
+# To Fix
+• B-06 — Fix review confirmation showing wrong pantry name
+• B-09 — Fix tooltip text overflow on map
+• B-14 — Fix language preference resetting on refresh
+• B-16 — Add minimum character validation to review form
+• Add ? tooltip definitions for every metric
+• Redesign pantry detail card with plain-English info
