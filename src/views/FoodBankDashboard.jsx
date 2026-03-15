@@ -12,7 +12,7 @@ import RiskBadge from '../components/RiskBadge'
 import ExportButton from '../components/ExportButton'
 import ResourceReviews from '../components/ResourceReviews'
 import SentimentPanel from '../components/SentimentPanel'
-
+import GoogleReviewsPanel from '../components/GoogleReviewsPanel'
 const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
 
 const RADIAN = Math.PI / 180
@@ -182,14 +182,14 @@ export default function FoodBankDashboard() {
 
       {/* Resource Table + Reviews */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card border border-border overflow-hidden">
-          <div className="p-5 border-b border-border flex items-center justify-between">
+        <div className="lg:col-span-2 bg-card border border-border overflow-hidden flex flex-col max-h-[700px]">
+          <div className="p-5 border-b border-border flex items-center justify-between shrink-0">
             <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Resources</h3>
             <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
               {'// '}click row to view reviews
             </span>
           </div>
-          <div className="overflow-auto max-h-80">
+          <div className="overflow-auto flex-1">
             <table className="w-full text-xs">
               <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
                 <tr>
@@ -222,7 +222,7 @@ export default function FoodBankDashboard() {
         </div>
 
         {/* Reviews side panel */}
-        <div className="bg-card border border-border p-5 overflow-auto max-h-[420px]">
+        <div className="bg-card border border-border p-5 overflow-auto max-h-[700px]">
           {selectedResource ? (
             <>
               <div className="mb-4 border-b border-border pb-4">
@@ -236,6 +236,7 @@ export default function FoodBankDashboard() {
               </div>
               <ResourceReviews resource={selectedResource} />
               <SentimentPanel resource={selectedResource} />
+              <GoogleReviewsPanel resource={selectedResource} />
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-tertiary text-xs gap-3">
