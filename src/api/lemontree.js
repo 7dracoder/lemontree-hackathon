@@ -50,7 +50,7 @@ export async function fetchMarkersWithinBounds(swLng, swLat, neLng, neLat) {
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
 }
-// Fetch reviews for a resource — tries the live API, falls back to seeded data
+// Fetch reviews for a resource — Supabase first, then API, then seeded data
 let _seededReviews = null
 async function getSeededReviews() {
   if (!_seededReviews) {
@@ -59,17 +59,62 @@ async function getSeededReviews() {
   }
   return _seededReviews
 }
+
+function supabaseRowToReview(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    deletedAt: row.deleted_at ?? null,
+    rating: row.rating ?? 0,
+    attended: row.attended ?? null,
+    didNotAttendReason: row.did_not_attend_reason ?? null,
+    waitTimeMinutes: row.wait_time_minutes ?? null,
+    text: row.review_text ?? row.text ?? null,
+    informationAccurate: row.information_accurate ?? null,
+    shareTextWithResource: row.share_text_with_resource ?? false,
+    photoUrl: row.photo_url ?? null,
+    photoPublic: row.photo_public ?? null,
+  }
+}
+
+async function fetchReviewsFromSupabase(resourceId) {
+  try {
+    const { createClient } = await import('@supabase/supabase-js')
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+    if (!url || !key) return []
+    const supabase = createClient(url, key)
+    const { data, error } = await supabase
+      .from('resource_reviews')
+      .select('*')
+      .eq('resource_id', String(resourceId))
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+    if (error) return []
+    return (data ?? []).map(supabaseRowToReview)
+  } catch (_) {
+    return []
+  }
+}
+
 export async function fetchResourceReviews(id) {
+  const fromSupabase = await fetchReviewsFromSupabase(id)
   try {
     const res = await fetch(`${BASE}/api/resources/${id}/reviews`)
     if (res.ok) {
       const data = parse(await res.json())
-      return Array.isArray(data) ? data : data.reviews ?? []
+      const fromApi = Array.isArray(data) ? data : data.reviews ?? []
+      const seen = new Set(fromSupabase.map(r => r.id))
+      const extra = fromApi.filter(r => !seen.has(r.id))
+      return [...fromSupabase, ...extra]
     }
   } catch (_) {}
-  // Fall back to seeded data
   const seeded = await getSeededReviews()
-  return seeded[String(id)] ?? []
+  const fromSeeded = seeded[String(id)] ?? []
+  const seen = new Set(fromSupabase.map(r => r.id))
+  const extra = fromSeeded.filter(r => !seen.has(r.id))
+  return [...fromSupabase, ...extra]
 }
 // Returns URL to the print-ready PDF flyer
 export function getResourcePDFUrl(lat, lng, { locationName, flyerLang = 'en', ref } = {}) {
