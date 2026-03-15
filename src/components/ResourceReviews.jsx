@@ -82,6 +82,8 @@ function ReviewCard({ review }) {
   )
 }
 
+const MIN_REVIEW_CHARS = 10
+
 export default function ResourceReviews({ resource }) {
   const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
@@ -110,9 +112,11 @@ export default function ResourceReviews({ resource }) {
   const ratingAvg = resource?.ratingAverage
   const reviewCount = resource?._count?.reviews ?? 0
 
+  const textTooShort = form.text.trim().length > 0 && form.text.trim().length < MIN_REVIEW_CHARS
+
   const handleSubmit = e => {
     e.preventDefault()
-    if (!form.rating) return
+    if (!form.rating || textTooShort) return
     // Build a ResourceReview object per the spec schema
     const review = {
       id: `local_${Date.now()}`,
@@ -273,9 +277,19 @@ export default function ResourceReviews({ resource }) {
               value={form.text}
               onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
               rows={3}
-              placeholder="OPTIONAL DETAILS..."
-              className="w-full bg-surface text-primary text-[11px] font-mono p-3 border border-border focus:border-accent outline-none resize-none placeholder:text-tertiary rounded-none"
+              placeholder="OPTIONAL DETAILS (MIN 10 CHARS)..."
+              className={`w-full bg-surface text-primary text-[11px] font-mono p-3 border focus:border-accent outline-none resize-none placeholder:text-tertiary rounded-none ${
+                textTooShort ? 'border-status-error' : 'border-border'
+              }`}
             />
+            <div className="flex items-center justify-between mt-1">
+              <span className={`text-[10px] tracking-widest uppercase font-bold ${textTooShort ? 'text-status-error' : 'text-tertiary'}`}>
+                {textTooShort ? `MIN ${MIN_REVIEW_CHARS} CHARS REQUIRED` : ''}
+              </span>
+              <span className={`text-[10px] tracking-widest font-bold ${textTooShort ? 'text-status-error' : 'text-tertiary'}`}>
+                {form.text.trim().length > 0 ? `${form.text.trim().length} / ${MIN_REVIEW_CHARS}+` : ''}
+              </span>
+            </div>
           </div>
 
           {/* Share with org */}
@@ -294,7 +308,7 @@ export default function ResourceReviews({ resource }) {
 
           <button
             type="submit"
-            disabled={!form.rating}
+            disabled={!form.rating || textTooShort}
             className="w-full py-3 bg-accent text-page font-bold tracking-widest uppercase text-[11px] hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-accent mt-4"
           >
             {t('submitBtn')}

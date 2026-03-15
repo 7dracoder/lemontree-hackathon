@@ -10,6 +10,17 @@ import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
 import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
 import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
+import MetricTooltip from '../components/MetricTooltip'
+
+const METRIC_TIPS = {
+  totalResources: 'Total food resources tracked in the system matching current filters.',
+  foodDesert: 'Resources classified in the most underserved cluster (Cluster 4), indicating food desert conditions.',
+  atCapacity: 'Percentage of resources with no available upcoming occurrences — indicating full capacity.',
+  lowConfidence: 'Resources with a data confidence score below 50%, suggesting unverified or incomplete information.',
+  clusterDist: 'Resources grouped into 4 clusters based on location density, rating, and access barriers.',
+  barrier: 'Composite barrier index (0–1) combining appointment requirements, distance, and capacity constraints per state.',
+  unverified: 'States with the most resources that have low data confidence (<50%), indicating data quality gaps.',
+}
 
 const CLUSTER_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
 const CLUSTER_LABELS_KEY = ['wellServed', 'moderateAccess', 'strained', 'foodDesert']
@@ -126,15 +137,10 @@ export default function GovDashboard() {
   }, [data])
 
   const kpis = [
-    { label: 'Total Resources', value: data.length.toLocaleString(), ...KPI_CONFIG[0] },
-    {
-      label: 'Food deserts (Severely underserved areas)',
-      value: clusterDist[3]?.count ?? 0,
-      href: '#nyc-pantry-service-zones',
-      ...KPI_CONFIG[1],
-    },
-    { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
-    { label: 'Low Confidence', value: data.filter((r) => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
+    { label: 'Total Resources', value: data.length.toLocaleString(), tip: METRIC_TIPS.totalResources, ...KPI_CONFIG[0] },
+    { label: `${t('foodDesert')} Zones`, value: clusterDist[3]?.count ?? 0, tip: METRIC_TIPS.foodDesert, ...KPI_CONFIG[1] },
+    { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, tip: METRIC_TIPS.atCapacity, ...KPI_CONFIG[2] },
+    { label: 'Low Confidence', value: data.filter(r => (r.confidence ?? 1) < 0.5).length, tip: METRIC_TIPS.lowConfidence, ...KPI_CONFIG[3] },
   ]
 
   function LegendPin({ color }) {
@@ -198,42 +204,15 @@ export default function GovDashboard() {
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">
-                {kpi.label}
-              </div>
-            </>
-          )
-
-          if (kpi.href) {
-            return (
-              <a
-                key={kpi.label}
-                href={kpi.href}
-                className={`block bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
-              >
-                {content}
-              </a>
-            )
-          }
-
-          return (
-            <div
-              key={kpi.label}
-              className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
-            >
-              {content}
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
             </div>
           )
         })}
       </div>
 
       <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-          Food Desert {t('cluster')} Distribution
-        </h3>
-        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
-          {'// '}Resources clustered by location, rating, and access barriers
-        </p>
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Food Desert {t('cluster')} Distribution<MetricTooltip text={METRIC_TIPS.clusterDist} /></h3>
+        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources clustered by location, rating, and access barriers</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {clusterDist.map((c, i) => (
             <div
@@ -254,12 +233,8 @@ export default function GovDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-            {t('barrierIndex')} by State
-          </h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
-            {'// '}Higher = more barriers (0–1 scale)
-          </p>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('barrierIndex')} by State<MetricTooltip text={METRIC_TIPS.barrier} /></h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Higher = more barriers (0–1 scale)</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barrierByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -275,12 +250,8 @@ export default function GovDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-            States with Most Unverified Resources
-          </h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
-            {'// '}Low confidence (&lt;0.5) resources by state
-          </p>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">States with Most Unverified Resources<MetricTooltip text={METRIC_TIPS.unverified} /></h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Low confidence (&lt;0.5) resources by state</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={lowConfidenceByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -626,10 +597,9 @@ export default function GovDashboard() {
           </table>
         </div>
       </div>
-
-      <div className="chart-card">
-        <TravelBurdenPanel resources={data} />
-      </div>
+      {/* Travel Burden Analysis */}
+      <TravelBurdenPanel resources={data} />
+      
     </div>
   )
 }
