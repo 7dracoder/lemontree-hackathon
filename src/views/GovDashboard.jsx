@@ -1,13 +1,11 @@
-import { useMemo, useEffect, useState } from 'react'
+import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { MapPin, Shield, AlertTriangle, Eye, TrendingUp } from 'lucide-react'
+import { MapPin, Shield, AlertTriangle, Eye } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
-import { clusterResources, computeBarrierIndex, getBarrierStyle } from '../utils/mlScoring'
+import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
+import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
-import HeatMapView from '../components/HeatMapView'
-import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
-import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
 import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
 import MetricTooltip from '../components/MetricTooltip'
@@ -32,78 +30,31 @@ const KPI_CONFIG = [
   { icon: Eye, accent: 'kpi-yellow', color: 'text-yellow-400', hex: '#FACC15' },
 ]
 
-function usePlacementRecommendations() {
-  const [recs, setRecs] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/placement-recommendations')
-        if (res.ok) {
-          setRecs(await res.json())
-          return
-        }
-      } catch (_) {}
-
-      try {
-        const res = await fetch('/placement_recs.json')
-        if (res.ok) setRecs(await res.json())
-      } catch (_) {}
-
-      setLoading(false)
-    }
-
-    load().finally(() => setLoading(false))
-  }, [])
-
-  return { recs, loading }
-}
-
 export default function GovDashboard() {
-  const [heatMode, setHeatMode] = useState('snap_rate')
-  const [nyHeatMode, setNyHeatMode] = useState('snap_rate')
-
-  const { data, isLoading, progress } = useFilteredResources({})
-  const { recs, loading: recsLoading } = usePlacementRecommendations()
+  const [filters, setFilters] = useState({})
+  const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
 
-  const barrierMap = useMemo(() => {
-    const result = {}
-    data.forEach((r) => {
-      result[r.id] = getBarrierStyle(r)
-    })
-    return result
-  }, [data])
-
-  const BARRIER_LEGEND = [
-    { color: '#22c55e', label: 'Very Accessible' },
-    { color: '#3b82f6', label: 'Moderately Accessible' },
-    { color: '#f59e0b', label: 'Limited Access' },
-    { color: '#ef4444', label: 'Severely Limited Access' },
-    { color: '#a855f7', label: 'Recommended Placement' },
-  ]
-
   const flyerCoords = useMemo(() => {
-    const r = data.find((x) => x.latitude && x.longitude)
+    const r = data.find(x => x.latitude && x.longitude)
     if (!r) return null
     return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Region' }
   }, [data])
 
   const clusterDist = useMemo(() => {
     const counts = [0, 0, 0, 0]
-    Object.values(clusterMap).forEach((v) => counts[v.cluster]++)
+    Object.values(clusterMap).forEach(v => counts[v.cluster]++)
     return counts.map((count, i) => ({
       label: t(CLUSTER_LABELS_KEY[i]),
       count,
       color: CLUSTER_COLORS[i],
     }))
-  }, [clusterMap, t, lang])
+  }, [clusterMap, lang])
 
   const barrierByState = useMemo(() => {
     const m = {}
-    data.forEach((r) => {
+    data.forEach(r => {
       if (!r.state) return
       if (!m[r.state]) m[r.state] = { sum: 0, count: 0 }
       m[r.state].sum += computeBarrierIndex(r)
@@ -116,7 +67,7 @@ export default function GovDashboard() {
   }, [data])
 
   const capacityData = useMemo(() => {
-    const atCapacity = data.filter((r) => !r.occurrences?.some((o) => !o.skippedAt)).length
+    const atCapacity = data.filter(r => !r.occurrences?.some(o => !o.skippedAt)).length
     const total = data.length || 1
     return [
       { name: 'At Capacity', value: atCapacity, pct: ((atCapacity / total) * 100).toFixed(1) },
@@ -126,7 +77,7 @@ export default function GovDashboard() {
 
   const lowConfidenceByState = useMemo(() => {
     const m = {}
-    data.forEach((r) => {
+    data.forEach(r => {
       if (!r.state || (r.confidence ?? 1) >= 0.5) return
       m[r.state] = (m[r.state] ?? 0) + 1
     })
@@ -143,38 +94,14 @@ export default function GovDashboard() {
     { label: 'Low Confidence', value: data.filter(r => (r.confidence ?? 1) < 0.5).length, tip: METRIC_TIPS.lowConfidence, ...KPI_CONFIG[3] },
   ]
 
-  function LegendPin({ color }) {
-    return (
-      <span
-        className="inline-block relative"
-        style={{
-          width: 12,
-          height: 12,
-          background: color,
-          border: '1.5px solid white',
-          borderRadius: '9999px 9999px 9999px 0',
-          transform: 'rotate(-45deg)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
-        }}
-      />
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-        <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-yellow-400 transition-all duration-300 rounded-full"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">
-          SYS_LOADING {progress}%
-        </p>
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
+      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+      <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
-    )
-  }
+      <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
+    </div>
+  )
 
   return (
     <div id="gov-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
@@ -183,33 +110,32 @@ export default function GovDashboard() {
           <h1 className="text-4xl font-display font-bold text-primary tracking-tighter uppercase">
             {t('government')}
           </h1>
-          <p className="text-secondary text-xs tracking-wide uppercase mt-2">
-            {'// '}
-            {t('govHeadline')}
-          </p>
+          <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('govHeadline')}</p>
         </div>
         <ExportButton data={data} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
+      <FilterBar filters={filters} onChange={setFilters} allData={all} />
+
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
-          const content = (
-            <>
+          return (
+            <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">
-                  KPI_0{i + 1}
-                </div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
               <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
-            </>
+            </div>
           )
         })}
       </div>
 
+      {/* Cluster Distribution */}
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Food Desert {t('cluster')} Distribution<MetricTooltip text={METRIC_TIPS.clusterDist} /></h3>
         <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources clustered by location, rating, and access barriers</p>
@@ -220,17 +146,14 @@ export default function GovDashboard() {
               className="p-4 text-center transition-all duration-200 hover:scale-[1.03]"
               style={{ border: `1px solid ${c.color}33`, background: `${c.color}0a` }}
             >
-              <div className="text-2xl font-display font-bold" style={{ color: c.color }}>
-                {c.count}
-              </div>
-              <div className="text-[11px] text-secondary mt-1 font-semibold tracking-wide uppercase">
-                {c.label}
-              </div>
+              <div className="text-2xl font-display font-bold" style={{ color: c.color }}>{c.count}</div>
+              <div className="text-[11px] text-secondary mt-1 font-semibold tracking-wide uppercase">{c.label}</div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Bar Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('barrierIndex')} by State<MetricTooltip text={METRIC_TIPS.barrier} /></h3>
@@ -263,304 +186,21 @@ export default function GovDashboard() {
         </div>
       </div>
 
-
+      {/* Map */}
       <div className="bg-card border border-border p-5">
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-          <div>
-            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-              Pantry Need Heatmap
-            </h3>
-            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-              Click toggles to explore different need indicators
-            </p>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setHeatMode('snap_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'snap_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Rate
-            </button>
-
-            <button
-              onClick={() => setHeatMode('poverty_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'poverty_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Poverty Rate
-            </button>
-
-            <button
-              onClick={() => setHeatMode('language_barrier_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'language_barrier_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Language Barrier Rate
-            </button>
-
-            <button
-              onClick={() => setHeatMode('pantry_count')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'pantry_count'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Pantry Count
-            </button>
-
-            <button
-              onClick={() => setHeatMode('nearest_pantry_distance')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'nearest_pantry_distance'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Distance to Pantry
-            </button>
-
-            <button
-              onClick={() => setHeatMode('snap_vs_distance')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'snap_vs_distance'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Pop + Distance to Pantry
-            </button>
-
-            <button
-              onClick={() => setHeatMode('snap_population_vs_pantry_count')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                heatMode === 'snap_population_vs_pantry_count'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Pop + Pantry Count
-            </button>
-          </div>
-        </div>
-
-        <div className="text-[10px] uppercase tracking-widest text-secondary mb-2">
-          Pantry Locations
-        </div>
-
-        <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4 border border-border px-3 py-3 bg-surface/30">
-          {BARRIER_LEGEND.map((item) => (
-            <div key={item.label} className="flex items-center gap-2 text-[11px] uppercase tracking-wide">
-              <LegendPin color={item.color} />
-              <span className="text-secondary">{item.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <HeatMapView
-          resources={data}
-          clusterMap={barrierMap}
-          placementRecs={recs}
-          height="500px"
-          mode={heatMode}
-        />
-      </div>
-
-
-      <div className="bg-card border border-border overflow-hidden">
-        <div className="p-5 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide flex items-center gap-2">
-              <TrendingUp size={14} className="text-green-400" />
-              Optimal New Pantry Locations
-            </h3>
-            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-              {'// '}ML-ranked zip codes · SHAP-weighted need score
-            </p>
-          </div>
-          {!recsLoading && recs[0]?.model_r2 != null && (
-            <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
-              Model R² {recs[0].model_r2.toFixed(3)}
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
+        <div className="flex gap-4 mb-3 flex-wrap">
+          {CLUSTER_LABELS_KEY.map((k, i) => (
+            <span key={k} className="text-xs flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 inline-block" style={{ background: CLUSTER_COLORS[i] }} />
+              <span className="text-secondary uppercase tracking-wide">{t(k)}</span>
             </span>
-          )}
-        </div>
-        {recsLoading ? (
-          <div className="p-6 text-[11px] text-secondary uppercase tracking-widest animate-pulse">Loading...</div>
-        ) : recs.length === 0 ? (
-          <div className="p-6 text-[11px] text-secondary uppercase tracking-widest">No recommendations available</div>
-        ) : (
-          <div className="divide-y divide-border">
-            {recs.map((rec, i) => (
-              <div key={rec.zip} className="p-5 flex flex-col md:flex-row md:items-center gap-3 hover:bg-surface transition-colors">
-                <div className="flex items-center gap-3 min-w-[80px]">
-                  <span className="text-[10px] font-bold text-tertiary tracking-widest">#{i + 1}</span>
-                  <span className="text-lg font-display font-bold text-green-400">{rec.zip}</span>
-                </div>
-                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
-                  <div>
-                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Score</div>
-                    <div className="font-bold text-primary">{(rec.placement_score * 100).toFixed(1)}</div>
-                  </div>
-                  <div>
-                    <div className="text-tertiary uppercase tracking-widest mb-0.5">SNAP HH</div>
-                    <div className="font-bold text-yellow-400">{rec.snap_households?.toLocaleString() ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Coverage Gap</div>
-                    <div className="font-bold text-red-400">{rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Nearby Pantries</div>
-                    <div className="font-bold text-secondary">{rec.pantry_count_nearby ?? 0}</div>
-                  </div>
-                </div>
-                <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{rec.explanation}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-card border border-border p-5">
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-          <div>
-            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-              NYC Greater Metro Area Heatmap
-            </h3>
-            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-              A closer look at pantry access where Lemontree partners are most concentrated. Click toggles to explore different need indicators.
-            </p>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setNyHeatMode('snap_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'snap_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Rate
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('poverty_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'poverty_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Poverty Rate
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('language_barrier_rate')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'language_barrier_rate'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Language Barrier Rate
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('pantry_count')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'pantry_count'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Pantry Count
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('nearest_pantry_distance')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'nearest_pantry_distance'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              Distance to Pantry
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('snap_vs_distance')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'snap_vs_distance'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Pop + Distance to Pantry
-            </button>
-
-            <button
-              onClick={() => setNyHeatMode('snap_population_vs_pantry_count')}
-              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                nyHeatMode === 'snap_population_vs_pantry_count'
-                  ? 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-transparent text-white border-border'
-              }`}
-            >
-              SNAP Pop + Pantry Count
-            </button>
-          </div>
-        </div>
-        <div className="text-[10px] uppercase tracking-widest text-secondary mb-2">
-          Pantry Locations
-        </div>
-
-        <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4 border border-border px-3 py-3 bg-surface/30">
-          {BARRIER_LEGEND.map((item) => (
-            <div key={item.label} className="flex items-center gap-2 text-[11px] uppercase tracking-wide">
-              <LegendPin color={item.color} />
-              <span className="text-secondary">{item.label}</span>
-            </div>
           ))}
         </div>
-
-        <HeatMapViewNYNJ
-          resources={data}
-          clusterMap={barrierMap}
-          placementRecs={recs}
-          height="500px"
-          mode={nyHeatMode}
-        />
+        <MapView resources={data} clusterMap={clusterMap} height="380px" />
       </div>
 
-      <div id="nyc-pantry-service-zones" className="bg-card border border-border p-5">
-        <div className="mb-4">
-          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-            NYC Pantry Service Zones
-          </h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-            Voronoi service areas colored by SNAP households assigned to each pantry
-          </p>
-        </div>
-
-        <VoronoiCoverageMapNYNJ
-          resources={data}
-          clusterMap={barrierMap}
-          height="620px"
-        />
-      </div>
-
+      {/* Priority Table */}
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">High-Priority Resources</h3>
@@ -570,17 +210,17 @@ export default function GovDashboard() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
               <tr>
-                {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map((h) => (
+                {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {data
-                .filter((r) => (r.riskScore ?? 0) >= 60)
+                .filter(r => (r.riskScore ?? 0) >= 60)
                 .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
                 .slice(0, 50)
-                .map((r) => (
+                .map(r => (
                   <tr key={r.id} className="hover:bg-surface transition-colors">
                     <td className="px-4 py-3 text-primary truncate max-w-[160px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
                     <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}</td>
