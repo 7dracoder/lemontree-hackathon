@@ -235,22 +235,125 @@ export default function FoodBankDashboard() {
 
         {/* Reviews side panel */}
         <div className="bg-card border border-border p-5 overflow-auto max-h-[700px]">
-          {selectedResource ? (
-            <>
-              <div className="mb-4 border-b border-border pb-4">
-                <p className="font-display font-bold text-primary tracking-wide uppercase text-sm">{selectedResource.name}</p>
-                <p className="text-[11px] tracking-widest uppercase text-tertiary mt-1">{selectedResource.city}, {selectedResource.state}</p>
-                {selectedResource.openByAppointment && (
-                  <span className="text-[10px] font-bold tracking-widest uppercase bg-status-info/10 text-status-info border border-status-info/30 px-2 py-0.5 mt-3 inline-block">
-                    📅 {t('openByAppointment')}
+          {selectedResource ? (() => {
+            const r = selectedResource
+            const typeName = lang === 'es'
+              ? (r.resourceType?.name_es ?? r.resourceType?.name ?? 'Resource')
+              : (r.resourceType?.name ?? 'Resource')
+            const desc = lang === 'es'
+              ? (r.description_es ?? r.description)
+              : r.description
+            const riskScore = r.riskScore ?? 0
+            const riskLevel = riskScore >= 60 ? 'High' : riskScore >= 30 ? 'Medium' : 'Low'
+            const riskColor = riskScore >= 60 ? 'text-red-400' : riskScore >= 30 ? 'text-yellow-400' : 'text-green-400'
+            const confidence = r.confidence != null ? Math.round(r.confidence * 100) : null
+            const reviewCount = r._count?.reviews ?? 0
+            const subCount = r._count?.resourceSubscriptions ?? 0
+
+            return (
+              <>
+                {/* Header */}
+                <div className="mb-4 border-b border-border pb-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-display font-bold text-primary tracking-wide uppercase text-sm leading-tight">{r.name}</p>
+                    <RiskBadge score={riskScore} />
+                  </div>
+                  <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 mt-2 bg-accent/10 text-accent border border-accent/30">
+                    {typeName}
                   </span>
-                )}
-              </div>
-              <ResourceReviews resource={selectedResource} />
-              <SentimentPanel resource={selectedResource} />
-              <GoogleReviewsPanel resource={selectedResource} />
-            </>
-          ) : (
+                </div>
+
+                {/* Plain-English Info */}
+                <div className="space-y-3 mb-5 border-b border-border pb-5">
+                  {/* Location */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-tertiary mt-0.5 shrink-0">📍</span>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase font-bold text-tertiary mb-0.5">Where to find it</p>
+                      <p className="text-xs text-primary leading-relaxed">
+                        {r.city ?? 'Unknown city'}, {r.state ?? ''}
+                        {r.zipCode ? ` ${r.zipCode}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {desc && (
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-tertiary mt-0.5 shrink-0">📝</span>
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase font-bold text-tertiary mb-0.5">What they offer</p>
+                        <p className="text-xs text-secondary leading-relaxed">{desc}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Access */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-tertiary mt-0.5 shrink-0">{r.openByAppointment ? '📅' : '🚶'}</span>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase font-bold text-tertiary mb-0.5">How to visit</p>
+                      <p className="text-xs text-primary leading-relaxed">
+                        {r.openByAppointment
+                          ? 'Appointment required — call ahead before visiting.'
+                          : 'Walk-ins welcome — no appointment needed.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Rating summary */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-tertiary mt-0.5 shrink-0">⭐</span>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase font-bold text-tertiary mb-0.5">Community rating</p>
+                      <p className="text-xs text-primary leading-relaxed">
+                        {r.ratingAverage
+                          ? `Rated ${r.ratingAverage.toFixed(1)} out of 5 based on ${reviewCount} review${reviewCount !== 1 ? 's' : ''}.`
+                          : 'No ratings yet — be the first to review!'}
+                        {subCount > 0 && ` ${subCount} people subscribed.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Risk assessment */}
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-tertiary mt-0.5 shrink-0">🛡️</span>
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase font-bold text-tertiary mb-0.5">Data quality</p>
+                      <p className="text-xs text-primary leading-relaxed">
+                        <span className={`font-bold ${riskColor}`}>{riskLevel} risk</span> (score: {riskScore}).{' '}
+                        {riskScore >= 60
+                          ? 'This resource may have outdated info or quality concerns.'
+                          : riskScore >= 30
+                            ? 'Some data points need verification.'
+                            : 'Data looks reliable and up to date.'}
+                      </p>
+                      {confidence != null && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-[10px] tracking-widest uppercase font-bold text-tertiary mb-1">
+                            <span>Confidence</span>
+                            <span className={confidence >= 70 ? 'text-green-400' : confidence >= 40 ? 'text-yellow-400' : 'text-red-400'}>
+                              {confidence}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-surface border border-border">
+                            <div
+                              className={`h-full transition-all ${confidence >= 70 ? 'bg-green-400' : confidence >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                              style={{ width: `${confidence}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <ResourceReviews resource={selectedResource} />
+                <SentimentPanel resource={selectedResource} />
+                <GoogleReviewsPanel resource={selectedResource} />
+              </>
+            )
+          })() : (
             <div className="flex flex-col items-center justify-center h-full text-tertiary text-xs gap-3">
               <MessageSquare size={24} className="opacity-40" />
               <span className="uppercase tracking-widest font-bold">SELECT A RESOURCE</span>
