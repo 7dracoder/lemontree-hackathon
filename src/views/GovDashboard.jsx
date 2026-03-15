@@ -6,6 +6,7 @@ import { useTranslation } from '../hooks/useTranslation'
 import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
+import HeatMapView from '../components/HeatMapView'
 import ExportButton from '../components/ExportButton'
 
 const CLUSTER_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
@@ -26,15 +27,20 @@ function usePlacementRecommendations() {
     async function load() {
       try {
         const res = await fetch('/api/placement-recommendations')
-        if (res.ok) { setRecs(await res.json()); return }
+        if (res.ok) {
+          setRecs(await res.json())
+          return
+        }
       } catch (_) {}
-      // Fallback to static JSON (works with npm run dev)
+
       try {
         const res = await fetch('/placement_recs.json')
         if (res.ok) setRecs(await res.json())
       } catch (_) {}
+
       setLoading(false)
     }
+
     load().finally(() => setLoading(false))
   }, [])
 
@@ -43,6 +49,8 @@ function usePlacementRecommendations() {
 
 export default function GovDashboard() {
   const [filters, setFilters] = useState({})
+  const [heatMode, setHeatMode] = useState('snap_rate')
+
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { recs, loading: recsLoading } = usePlacementRecommendations()
   const { t, lang } = useTranslation()
@@ -106,14 +114,21 @@ export default function GovDashboard() {
     { label: 'Low Confidence', value: data.filter(r => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
   ]
 
-  if (isLoading) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
-      <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
+        <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-yellow-400 transition-all duration-300 rounded-full"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">
+          SYS_LOADING {progress}%
+        </p>
       </div>
-      <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
-    </div>
-  )
+    )
+  }
 
   return (
     <div id="gov-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
@@ -122,35 +137,47 @@ export default function GovDashboard() {
           <h1 className="text-4xl font-display font-bold text-primary tracking-tighter uppercase">
             {t('government')}
           </h1>
-          <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('govHeadline')}</p>
+          <p className="text-secondary text-xs tracking-wide uppercase mt-2">
+            {'// '}
+            {t('govHeadline')}
+          </p>
         </div>
         <ExportButton data={data} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
+            <div
+              key={kpi.label}
+              className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
+            >
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">
+                  KPI_0{i + 1}
+                </div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">{kpi.label}</div>
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">
+                {kpi.label}
+              </div>
             </div>
           )
         })}
       </div>
 
-      {/* Cluster Distribution */}
       <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Food Desert {t('cluster')} Distribution</h3>
-        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources clustered by location, rating, and access barriers</p>
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+          Food Desert {t('cluster')} Distribution
+        </h3>
+        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
+          {'// '}Resources clustered by location, rating, and access barriers
+        </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {clusterDist.map((c, i) => (
             <div
@@ -158,18 +185,25 @@ export default function GovDashboard() {
               className="p-4 text-center transition-all duration-200 hover:scale-[1.03]"
               style={{ border: `1px solid ${c.color}33`, background: `${c.color}0a` }}
             >
-              <div className="text-2xl font-display font-bold" style={{ color: c.color }}>{c.count}</div>
-              <div className="text-[11px] text-secondary mt-1 font-semibold tracking-wide uppercase">{c.label}</div>
+              <div className="text-2xl font-display font-bold" style={{ color: c.color }}>
+                {c.count}
+              </div>
+              <div className="text-[11px] text-secondary mt-1 font-semibold tracking-wide uppercase">
+                {c.label}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Bar Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('barrierIndex')} by State</h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Higher = more barriers (0–1 scale)</p>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+            {t('barrierIndex')} by State
+          </h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
+            {'// '}Higher = more barriers (0–1 scale)
+          </p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barrierByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -185,8 +219,12 @@ export default function GovDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">States with Most Unverified Resources</h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Low confidence (&lt;0.5) resources by state</p>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+            States with Most Unverified Resources
+          </h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
+            {'// '}Low confidence (&lt;0.5) resources by state
+          </p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={lowConfidenceByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -198,9 +236,10 @@ export default function GovDashboard() {
         </div>
       </div>
 
-      {/* Map */}
       <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+          🗺️ {t('mapTitle')} — Food Desert Zones
+        </h3>
         <div className="flex gap-4 mb-3 flex-wrap">
           {CLUSTER_LABELS_KEY.map((k, i) => (
             <span key={k} className="text-xs flex items-center gap-1.5">
@@ -218,7 +257,73 @@ export default function GovDashboard() {
         <MapView resources={data} clusterMap={clusterMap} placementRecs={recs} height="380px" />
       </div>
 
-      {/* Placement Recommendations */}
+      <div className="bg-card border border-border p-5">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
+              Pantry Need Heatmap
+            </h3>
+            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
+              {'// '}Toggle what the map highlights
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setHeatMode('snap_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Rate
+            </button>
+
+            <button
+              onClick={() => setHeatMode('pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Pantry Count
+            </button>
+
+            <button
+              onClick={() => setHeatMode('snap_vs_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_vs_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Distance to Pantry
+            </button>
+
+            <button
+              onClick={() => setHeatMode('snap_population_vs_pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_population_vs_pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Pantry Count
+            </button>
+          </div>
+        </div>
+
+        <HeatMapView
+          resources={data}
+          clusterMap={clusterMap}
+          placementRecs={recs}
+          height="500px"
+          mode={heatMode}
+        />
+      </div>
+
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
@@ -226,7 +331,9 @@ export default function GovDashboard() {
               <TrendingUp size={14} className="text-green-400" />
               Optimal New Pantry Locations
             </h3>
-            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">{'// '}ML-ranked zip codes · SHAP-weighted need score</p>
+            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
+              {'// '}ML-ranked zip codes · SHAP-weighted need score
+            </p>
           </div>
           {!recsLoading && recs[0]?.model_r2 != null && (
             <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
@@ -271,7 +378,6 @@ export default function GovDashboard() {
         )}
       </div>
 
-      {/* Priority Table */}
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">High-Priority Resources</h3>
