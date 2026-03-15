@@ -12,7 +12,7 @@ import RiskBadge from '../components/RiskBadge'
 import ExportButton from '../components/ExportButton'
 import ResourceReviews from '../components/ResourceReviews'
 import SentimentPanel from '../components/SentimentPanel'
-
+import GoogleReviewsPanel from '../components/GoogleReviewsPanel'
 const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
 
 const RADIAN = Math.PI / 180
@@ -236,6 +236,7 @@ export default function FoodBankDashboard() {
               </div>
               <ResourceReviews resource={selectedResource} />
               <SentimentPanel resource={selectedResource} />
+              <GoogleReviewsPanel resource={selectedResource} />
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-tertiary text-xs gap-3">
