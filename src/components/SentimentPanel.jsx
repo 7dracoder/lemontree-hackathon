@@ -11,13 +11,13 @@ const client = new OpenAI({
 
 function ScoreBar({ label, value, color }) {
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-gray-400">
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-[10px] font-semibold tracking-wider uppercase text-secondary">
         <span>{label}</span>
         <span>{(value * 100).toFixed(0)}%</span>
       </div>
-      <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${value * 100}%` }} />
+      <div className="h-2 bg-card border border-border">
+        <div className={`h-full ${color}`} style={{ width: `${value * 100}%` }} />
       </div>
     </div>
   )
@@ -103,54 +103,55 @@ No markdown.`
   const Icon = analysis.compound >= 0.05 ? TrendingUp : analysis.compound <= -0.05 ? TrendingDown : Minus
 
   return (
-    <div className="mt-4 space-y-3 border-t border-gray-700/50 pt-4">
-      <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-        <Sparkles size={12} className="text-yellow-400" /> Sentiment Analysis
+    <div className="mt-6 space-y-4 border-t border-border pt-4">
+      <h4 className="text-[11px] font-bold text-secondary uppercase tracking-wider flex items-center gap-2">
+        <Sparkles size={12} className="text-accent" /> Sentiment Analysis
       </h4>
 
       {/* Compound score */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-2">
             <Icon size={14} className={color} />
-            <span className={`text-sm font-semibold ${color}`}>{label}</span>
-            <span className="text-xs text-gray-500 ml-auto">
+            <span className={`text-[11px] font-bold tracking-wider uppercase ${color}`}>{label}</span>
+            <span className="text-xs font-mono text-tertiary ml-auto">
               {analysis.compound >= 0 ? '+' : ''}{analysis.compound.toFixed(3)}
             </span>
           </div>
-          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-card border border-border">
             <div
-              className={`h-full rounded-full transition-all ${analysis.compound >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+              className={`h-full transition-all ${analysis.compound >= 0 ? 'bg-status-success' : 'bg-status-error'}`}
               style={{ width: `${Math.abs(analysis.compound) * 100}%`, marginLeft: analysis.compound < 0 ? `${(1 - Math.abs(analysis.compound)) * 100}%` : 0 }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-            <span>−1 Negative</span>
-            <span className="text-gray-500">{analysis.count} reviews scored</span>
-            <span>+1 Positive</span>
+          <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-tertiary mt-1">
+            <span>−1 NEG</span>
+            <span className="text-secondary">{analysis.count} REVIEWS SCORED</span>
+            <span>+1 POS</span>
           </div>
         </div>
       </div>
 
       {/* Pos / Neg / Neu bars */}
-      <div className="space-y-1.5">
-        <ScoreBar label="Positive" value={analysis.pos} color="bg-green-500" />
-        <ScoreBar label="Negative" value={analysis.neg} color="bg-red-500" />
-        <ScoreBar label="Neutral" value={analysis.neu} color="bg-gray-500" />
+      <div className="space-y-2 mt-4">
+        <ScoreBar label="Positive" value={analysis.pos} color="bg-status-success" />
+        <ScoreBar label="Negative" value={analysis.neg} color="bg-status-error" />
+        <ScoreBar label="Neutral" value={analysis.neu} color="bg-tertiary" />
       </div>
 
       {/* Generate Report */}
       <button
         onClick={generateReport}
         disabled={loadingReport}
-        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-medium hover:bg-yellow-400/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-accent bg-accent/10 text-accent text-[11px] uppercase tracking-wider font-bold hover:bg-accent/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loadingReport ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-        {loadingReport ? 'Generating…' : 'Generate AI Report'}
+        {loadingReport ? 'GENERATING...' : 'GENERATE AI REPORT'}
       </button>
 
       {report && (
-        <div className="bg-gray-800/60 border border-gray-700/40 rounded-xl p-3 text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+        <div className="mt-3 bg-card border border-border p-3 text-xs tracking-wide text-primary leading-relaxed whitespace-pre-wrap font-mono shadow-inner shadow-black/50">
+          <span className="text-accent font-bold mb-2 block">{'>> REPORT_GENERATED'}</span>
           {report}
         </div>
       )}

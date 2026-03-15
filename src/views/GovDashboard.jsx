@@ -7,15 +7,16 @@ import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import ExportButton from '../components/ExportButton'
+import TravelBurdenPanel from '../components/TravelBurdenPanel'
 
 const CLUSTER_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
 const CLUSTER_LABELS_KEY = ['wellServed', 'moderateAccess', 'strained', 'foodDesert']
 
 const KPI_CONFIG = [
-  { icon: MapPin, accent: 'kpi-blue', color: 'text-blue-400' },
-  { icon: AlertTriangle, accent: 'kpi-red', color: 'text-red-400' },
-  { icon: Shield, accent: 'kpi-orange', color: 'text-orange-400' },
-  { icon: Eye, accent: 'kpi-yellow', color: 'text-yellow-400' },
+  { icon: MapPin, accent: 'kpi-blue', color: 'text-blue-400', hex: '#60A5FA' },
+  { icon: AlertTriangle, accent: 'kpi-red', color: 'text-red-400', hex: '#F87171' },
+  { icon: Shield, accent: 'kpi-orange', color: 'text-orange-400', hex: '#FB923C' },
+  { icon: Eye, accent: 'kpi-yellow', color: 'text-yellow-400', hex: '#FACC15' },
 ]
 
 export default function GovDashboard() {
@@ -84,70 +85,74 @@ export default function GovDashboard() {
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
-      <div className="w-72 h-2 bg-gray-800 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all duration-300 rounded-full shimmer" style={{ width: `${progress}%` }} />
+      <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
+      <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
-      <p className="text-gray-400 text-sm">{t('loading')} {progress}%</p>
+      <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
     </div>
   )
 
   return (
-    <div id="gov-dashboard" className="p-6 space-y-6 max-w-7xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div id="gov-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">🏛️ {t('government')}</h1>
-          <p className="text-gray-500 text-sm mt-1">{t('govHeadline')}</p>
+          <h1 className="text-4xl font-display font-bold text-primary tracking-tighter uppercase">
+            {t('government')}
+          </h1>
+          <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('govHeadline')}</p>
         </div>
         <ExportButton data={data} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />
 
-      {/* KPI Cards */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
           return (
-            <div key={kpi.label} className={`glass-card rounded-xl p-4 ${kpi.accent} animate-fade-in-up stagger-${i + 1}`}>
-              <div className="flex items-center justify-between mb-2">
-                <Icon size={16} className={`${kpi.color} opacity-60`} />
+            <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
+              <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
+              <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
+                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
+                <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
-              <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium">{kpi.label}</div>
+              <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">{kpi.label}</div>
             </div>
           )
         })}
       </div>
 
       {/* Cluster Distribution */}
-      <div className="chart-card">
-        <h3 className="text-sm font-semibold text-gray-300 mb-1">Food Desert {t('cluster')} Distribution</h3>
-        <p className="text-xs text-gray-600 mb-4">Resources clustered by location, rating, and access barriers</p>
+      <div className="bg-card border border-border p-5">
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Food Desert {t('cluster')} Distribution</h3>
+        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources clustered by location, rating, and access barriers</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {clusterDist.map((c, i) => (
             <div
               key={i}
-              className="rounded-xl p-4 text-center transition-all duration-200 hover:scale-[1.03]"
+              className="p-4 text-center transition-all duration-200 hover:scale-[1.03]"
               style={{ border: `1px solid ${c.color}33`, background: `${c.color}0a` }}
             >
-              <div className="text-2xl font-bold" style={{ color: c.color }}>{c.count}</div>
-              <div className="text-xs text-gray-400 mt-1 font-medium">{c.label}</div>
+              <div className="text-2xl font-display font-bold" style={{ color: c.color }}>{c.count}</div>
+              <div className="text-[11px] text-secondary mt-1 font-semibold tracking-wide uppercase">{c.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Charts row */}
+      {/* Bar Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="chart-card">
-          <h3 className="text-sm font-semibold text-gray-300 mb-1">{t('barrierIndex')} by State</h3>
-          <p className="text-xs text-gray-600 mb-3">Higher = more barriers (0–1 scale)</p>
+        <div className="bg-card border border-border p-5">
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('barrierIndex')} by State</h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Higher = more barriers (0–1 scale)</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barrierByState}>
-              <XAxis dataKey="state" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 1]} tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'rgba(17,24,39,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }} />
-              <Bar dataKey="barrier" radius={[6, 6, 0, 0]}>
+              <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 1]} tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Bar dataKey="barrier" radius={[0, 0, 0, 0]}>
                 {barrierByState.map((entry, i) => (
                   <Cell key={i} fill={entry.barrier > 0.6 ? '#ef4444' : entry.barrier > 0.3 ? '#f59e0b' : '#22c55e'} />
                 ))}
@@ -156,63 +161,63 @@ export default function GovDashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="chart-card">
-          <h3 className="text-sm font-semibold text-gray-300 mb-1">States with Most Unverified Resources</h3>
-          <p className="text-xs text-gray-600 mb-3">Low confidence (&lt;0.5) resources by state</p>
+        <div className="bg-card border border-border p-5">
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">States with Most Unverified Resources</h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Low confidence (&lt;0.5) resources by state</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={lowConfidenceByState}>
-              <XAxis dataKey="state" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'rgba(17,24,39,0.95)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }} />
-              <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+              <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Bar dataKey="count" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Map with cluster colors */}
-      <div className="chart-card">
-        <h3 className="text-sm font-semibold text-gray-300 mb-1">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
+      {/* Map */}
+      <div className="bg-card border border-border p-5">
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
         <div className="flex gap-4 mb-3 flex-wrap">
           {CLUSTER_LABELS_KEY.map((k, i) => (
             <span key={k} className="text-xs flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: CLUSTER_COLORS[i] }} />
-              <span className="text-gray-400">{t(k)}</span>
+              <span className="w-2.5 h-2.5 inline-block" style={{ background: CLUSTER_COLORS[i] }} />
+              <span className="text-secondary uppercase tracking-wide">{t(k)}</span>
             </span>
           ))}
         </div>
         <MapView resources={data} clusterMap={clusterMap} height="380px" />
       </div>
 
-      {/* Resource detail table */}
-      <div className="glass-card rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-300">High-Priority Resources</h3>
-          <span className="text-xs text-gray-600 font-medium">{t('riskScore')} ≥ 60</span>
+      {/* Priority Table */}
+      <div className="bg-card border border-border overflow-hidden">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">High-Priority Resources</h3>
+          <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">{t('riskScore')} ≥ 60</span>
         </div>
         <div className="overflow-auto max-h-64">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-800/40 sticky top-0">
+          <table className="w-full text-xs">
+            <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
               <tr>
                 {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map(h => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs text-gray-500 font-semibold uppercase tracking-wider">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {data
                 .filter(r => (r.riskScore ?? 0) >= 60)
                 .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
                 .slice(0, 50)
                 .map(r => (
-                  <tr key={r.id} className="table-row border-t border-gray-800/30">
-                    <td className="px-3 py-2.5 text-white truncate max-w-[160px] font-medium">{r.name ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-gray-400">{r.city ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-gray-400">{r.state ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-red-400 font-bold">{r.riskScore}</td>
-                    <td className="px-3 py-2.5 text-orange-400">{computeBarrierIndex(r).toFixed(2)}</td>
-                    <td className="px-3 py-2.5 text-gray-400">{r.confidence != null ? `${(r.confidence * 100).toFixed(0)}%` : '—'}</td>
-                    <td className="px-3 py-2.5 text-xs font-medium" style={{ color: clusterMap[r.id]?.color ?? '#6b7280' }}>
+                  <tr key={r.id} className="hover:bg-surface transition-colors">
+                    <td className="px-4 py-3 text-primary truncate max-w-[160px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}</td>
+                    <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.state ?? '—'}</td>
+                    <td className="px-4 py-3 text-red-400 font-bold">{r.riskScore}</td>
+                    <td className="px-4 py-3 text-orange-400">{computeBarrierIndex(r).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-secondary">{r.confidence != null ? `${(r.confidence * 100).toFixed(0)}%` : '—'}</td>
+                    <td className="px-4 py-3 text-xs font-medium" style={{ color: clusterMap[r.id]?.color ?? '#71717A' }}>
                       {clusterMap[r.id]?.label ?? '—'}
                     </td>
                   </tr>
@@ -221,6 +226,11 @@ export default function GovDashboard() {
           </table>
         </div>
       </div>
+      {/* Travel Burden Analysis */}
+      <div className="chart-card">
+        <TravelBurdenPanel resources={data} />
+      </div>
+      
     </div>
   )
 }
