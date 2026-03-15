@@ -282,6 +282,28 @@ export default function GovDashboard() {
             </button>
 
             <button
+              onClick={() => setHeatMode('poverty_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'poverty_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Poverty Rate
+            </button>
+
+            <button
+              onClick={() => setHeatMode('language_barrier_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'language_barrier_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Language Barrier Rate
+            </button>
+            
+            <button
               onClick={() => setHeatMode('pantry_count')}
               className={`px-3 py-2 border text-xs uppercase tracking-widest ${
                 heatMode === 'pantry_count'
@@ -291,6 +313,7 @@ export default function GovDashboard() {
             >
               Pantry Count
             </button>
+
 
             <button
               onClick={() => setHeatMode('snap_vs_distance')}
