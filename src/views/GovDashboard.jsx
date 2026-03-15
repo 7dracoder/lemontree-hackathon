@@ -1,14 +1,13 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { MapPin, Shield, AlertTriangle, Eye, TrendingUp } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
 import { clusterResources, computeBarrierIndex, getBarrierStyle } from '../utils/mlScoring'
-import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import HeatMapView from '../components/HeatMapView'
 import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
-
+import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
 import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
 
@@ -51,12 +50,10 @@ function usePlacementRecommendations() {
 }
 
 export default function GovDashboard() {
-  const [filters, setFilters] = useState({})
   const [heatMode, setHeatMode] = useState('snap_rate')
   const [nyHeatMode, setNyHeatMode] = useState('snap_rate')
 
-
-  const { data, all, isLoading, progress } = useFilteredResources(filters)
+  const { data, isLoading, progress } = useFilteredResources({})
   const { recs, loading: recsLoading } = usePlacementRecommendations()
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
@@ -130,7 +127,12 @@ export default function GovDashboard() {
 
   const kpis = [
     { label: 'Total Resources', value: data.length.toLocaleString(), ...KPI_CONFIG[0] },
-    { label: `${t('foodDesert')} Zones`, value: clusterDist[3]?.count ?? 0, ...KPI_CONFIG[1] },
+    {
+      label: 'Food deserts (Severely underserved areas)',
+      value: clusterDist[3]?.count ?? 0,
+      href: '#nyc-pantry-service-zones',
+      ...KPI_CONFIG[1],
+    },
     { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
     { label: 'Low Confidence', value: data.filter((r) => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
   ]
@@ -183,16 +185,11 @@ export default function GovDashboard() {
         <ExportButton data={data} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
-      <FilterBar filters={filters} onChange={setFilters} allData={all} />
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
-          return (
-            <div
-              key={kpi.label}
-              className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
-            >
+          const content = (
+            <>
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
                 <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">
@@ -204,6 +201,27 @@ export default function GovDashboard() {
               <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">
                 {kpi.label}
               </div>
+            </>
+          )
+
+          if (kpi.href) {
+            return (
+              <a
+                key={kpi.label}
+                href={kpi.href}
+                className={`block bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
+              >
+                {content}
+              </a>
+            )
+          }
+
+          return (
+            <div
+              key={kpi.label}
+              className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}
+            >
+              {content}
             </div>
           )
         })}
@@ -274,26 +292,6 @@ export default function GovDashboard() {
         </div>
       </div>
 
-      <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-          🗺️ {t('mapTitle')} — Food Desert Zones
-        </h3>
-        <div className="flex gap-4 mb-3 flex-wrap">
-          {CLUSTER_LABELS_KEY.map((k, i) => (
-            <span key={k} className="text-xs flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 inline-block" style={{ background: CLUSTER_COLORS[i] }} />
-              <span className="text-secondary uppercase tracking-wide">{t(k)}</span>
-            </span>
-          ))}
-          {recs.length > 0 && (
-            <span className="text-xs flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 inline-block rounded-full border-2 border-white" style={{ background: '#a855f7' }} />
-              <span className="text-secondary uppercase tracking-wide">Recommended Placement</span>
-            </span>
-          )}
-        </div>
-        <MapView resources={data} clusterMap={barrierMap} placementRecs={recs} height="380px" />
-      </div>
 
       <div className="bg-card border border-border p-5">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
@@ -302,7 +300,7 @@ export default function GovDashboard() {
               Pantry Need Heatmap
             </h3>
             <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-             Click toggles to explore different need indicators
+              Click toggles to explore different need indicators
             </p>
           </div>
 
@@ -408,7 +406,7 @@ export default function GovDashboard() {
         />
       </div>
 
-    
+
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
@@ -575,6 +573,22 @@ export default function GovDashboard() {
         />
       </div>
 
+      <div id="nyc-pantry-service-zones" className="bg-card border border-border p-5">
+        <div className="mb-4">
+          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
+            NYC Pantry Service Zones
+          </h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
+            Voronoi service areas colored by SNAP households assigned to each pantry
+          </p>
+        </div>
+
+        <VoronoiCoverageMapNYNJ
+          resources={data}
+          clusterMap={barrierMap}
+          height="620px"
+        />
+      </div>
 
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
