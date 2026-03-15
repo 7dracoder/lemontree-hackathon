@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { MapPin, Shield, AlertTriangle, Eye, TrendingUp } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
-import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
+import { clusterResources, computeBarrierIndex, getBarrierStyle } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import HeatMapView from '../components/HeatMapView'
@@ -60,6 +60,22 @@ export default function GovDashboard() {
   const { recs, loading: recsLoading } = usePlacementRecommendations()
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
+
+  const barrierMap = useMemo(() => {
+    const result = {}
+    data.forEach((r) => {
+      result[r.id] = getBarrierStyle(r)
+    })
+    return result
+  }, [data])
+
+  const BARRIER_LEGEND = [
+    { color: '#22c55e', label: 'Very Accessible' },
+    { color: '#3b82f6', label: 'Moderately Accessible' },
+    { color: '#f59e0b', label: 'Limited Access' },
+    { color: '#ef4444', label: 'Severely Limited Access' },
+    { color: '#a855f7', label: 'Recommended Placement' },
+  ]
 
   const flyerCoords = useMemo(() => {
     const r = data.find((x) => x.latitude && x.longitude)
@@ -118,6 +134,23 @@ export default function GovDashboard() {
     { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
     { label: 'Low Confidence', value: data.filter((r) => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
   ]
+
+  function LegendPin({ color }) {
+    return (
+      <span
+        className="inline-block relative"
+        style={{
+          width: 12,
+          height: 12,
+          background: color,
+          border: '1.5px solid white',
+          borderRadius: '9999px 9999px 9999px 0',
+          transform: 'rotate(-45deg)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+        }}
+      />
+    )
+  }
 
   if (isLoading) {
     return (
@@ -259,7 +292,7 @@ export default function GovDashboard() {
             </span>
           )}
         </div>
-        <MapView resources={data} clusterMap={clusterMap} placementRecs={recs} height="380px" />
+        <MapView resources={data} clusterMap={barrierMap} placementRecs={recs} height="380px" />
       </div>
 
       <div className="bg-card border border-border p-5">
@@ -269,7 +302,7 @@ export default function GovDashboard() {
               Pantry Need Heatmap
             </h3>
             <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-              {'// '}Toggle what the map highlights
+             Click toggles to explore different need indicators
             </p>
           </div>
 
@@ -319,6 +352,17 @@ export default function GovDashboard() {
             </button>
 
             <button
+              onClick={() => setHeatMode('nearest_pantry_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'nearest_pantry_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Distance to Pantry
+            </button>
+
+            <button
               onClick={() => setHeatMode('snap_vs_distance')}
               className={`px-3 py-2 border text-xs uppercase tracking-widest ${
                 heatMode === 'snap_vs_distance'
@@ -342,9 +386,22 @@ export default function GovDashboard() {
           </div>
         </div>
 
+        <div className="text-[10px] uppercase tracking-widest text-secondary mb-2">
+          Pantry Locations
+        </div>
+
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4 border border-border px-3 py-3 bg-surface/30">
+          {BARRIER_LEGEND.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 text-[11px] uppercase tracking-wide">
+              <LegendPin color={item.color} />
+              <span className="text-secondary">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
         <HeatMapView
           resources={data}
-          clusterMap={clusterMap}
+          clusterMap={barrierMap}
           placementRecs={recs}
           height="500px"
           mode={heatMode}
@@ -410,10 +467,10 @@ export default function GovDashboard() {
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
           <div>
             <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-              NY / NJ Heatmap
+              NYC Greater Metro Area Heatmap
             </h3>
             <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-              {'// '}Tri-state zoomed view focused on NY and NJ ZIPs
+              A closer look at pantry access where Lemontree partners are most concentrated. Click toggles to explore different need indicators.
             </p>
           </div>
 
@@ -463,6 +520,17 @@ export default function GovDashboard() {
             </button>
 
             <button
+              onClick={() => setNyHeatMode('nearest_pantry_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'nearest_pantry_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Distance to Pantry
+            </button>
+
+            <button
               onClick={() => setNyHeatMode('snap_vs_distance')}
               className={`px-3 py-2 border text-xs uppercase tracking-widest ${
                 nyHeatMode === 'snap_vs_distance'
@@ -485,16 +553,27 @@ export default function GovDashboard() {
             </button>
           </div>
         </div>
+        <div className="text-[10px] uppercase tracking-widest text-secondary mb-2">
+          Pantry Locations
+        </div>
+
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4 border border-border px-3 py-3 bg-surface/30">
+          {BARRIER_LEGEND.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 text-[11px] uppercase tracking-wide">
+              <LegendPin color={item.color} />
+              <span className="text-secondary">{item.label}</span>
+            </div>
+          ))}
+        </div>
 
         <HeatMapViewNYNJ
           resources={data}
-          clusterMap={clusterMap}
+          clusterMap={barrierMap}
           placementRecs={recs}
           height="500px"
           mode={nyHeatMode}
         />
       </div>
-
 
 
       <div className="bg-card border border-border overflow-hidden">

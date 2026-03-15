@@ -1,6 +1,9 @@
-import { MapContainer, TileLayer, Circle, CircleMarker, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Circle, Marker, Tooltip, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { getRiskLabel } from '../utils/mlScoring'
+import { useTranslation } from '../hooks/useTranslation'
 
 // this is publishable key, safe for github
 const supabase = createClient(
@@ -11,6 +14,26 @@ const supabase = createClient(
 const DEFAULT_CENTER = [39.5, -98.35]
 const DEFAULT_ZOOM = 4
 
+function makePinIcon(color = '#3b82f6') {
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width: 24px;
+        height: 24px;
+        background: ${color};
+        border: 2px solid white;
+        border-radius: 9999px 9999px 9999px 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      "></div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [9, 18],
+    popupAnchor: [0, -18]
+  })
+}
+
 function FlyToCenter({ center, zoom, shouldFly }) {
   const map = useMap()
 
@@ -18,7 +41,7 @@ function FlyToCenter({ center, zoom, shouldFly }) {
     if (shouldFly) {
       map.flyTo(center, zoom, { duration: 1.2 })
     }
-  }, [center[0], center[1], zoom, shouldFly])
+  }, [map, center, zoom, shouldFly])
 
   return null
 }
@@ -80,6 +103,18 @@ function buildRowsWithScore(rows, mode) {
       _score: r._norm,
       _label: 'Language barrier rate',
       _valueText: r.limited_english_pct != null ? `${(r.limited_english_pct * 100).toFixed(1)}%` : '—'
+    }))
+  }
+
+  if (mode === 'nearest_pantry_distance') {
+    return normalize(rows, 'nearest_pantry_miles').map((r) => ({
+      ...r,
+      _score: r._norm,
+      _label: 'Nearest pantry distance',
+      _valueText:
+        r.nearest_pantry_miles != null
+          ? `${Number(r.nearest_pantry_miles).toFixed(2)} mi`
+          : '—'
     }))
   }
 
@@ -228,9 +263,15 @@ export default function HeatMapView({
   mode = 'snap_rate'
 }) {
   const [rows, setRows] = useState([])
+  const { t, lang } = useTranslation()
 
   const center = DEFAULT_CENTER
   const zoom = DEFAULT_ZOOM
+
+  const validResources = useMemo(
+    () => (resources || []).filter((r) => r.latitude && r.longitude),
+    [resources]
+  )
 
   useEffect(() => {
     async function load() {
@@ -328,32 +369,64 @@ export default function HeatMapView({
 
         <SnapLayer rows={rows} mode={mode} />
 
-        {placementRecs.filter(r => r.zip_lat && r.zip_lon).map((rec, i) => (
-          <CircleMarker
+        {validResources.map((r) => {
+          const markerStyle = clusterMap?.[r.id]
+          const fallbackRisk = getRiskLabel(r.riskScore ?? 0)
+          const pinColor = markerStyle?.color ?? fallbackRisk.color ?? '#3b82f6'
+          const pinLabel = markerStyle?.label ?? fallbackRisk.label
+          const pinIcon = makePinIcon(pinColor)
+
+          const typeName =
+            lang === 'es'
+              ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
+              : (r.resourceType?.name ?? '')
+
+          const desc =
+            lang === 'es'
+              ? (r.description_es ?? r.description ?? '')
+              : (r.description ?? '')
+
+          return (
+            <Marker
+              key={`resource-${r.id}`}
+              position={[r.latitude, r.longitude]}
+              icon={pinIcon}
+            >
+              <Tooltip>
+                <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
+                  <strong className="text-accent">{r.name ?? 'Unknown'}</strong><br />
+                  <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
+                  {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
+                  {r._count?.reviews ? ` (${r._count.reviews} ${t('reviews').toLowerCase()})` : ''}<br />
+                  <span style={{ color: pinColor }}>📍 {pinLabel}</span>
+                  {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
+                  {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
+                </div>
+              </Tooltip>
+            </Marker>
+          )
+        })}
+
+        {placementRecs.filter((r) => r.zip_lat && r.zip_lon).map((rec, i) => (
+        <Marker
             key={`rec-${rec.zip}`}
-            center={[rec.zip_lat, rec.zip_lon]}
-            radius={10}
-            pathOptions={{
-              fillColor: '#a855f7',
-              color: '#ffffff',
-              fillOpacity: 0.95,
-              weight: 2
-            }}
-          >
+            position={[rec.zip_lat, rec.zip_lon]}
+            icon={makePinIcon('#a855f7')}
+        >
             <Tooltip>
-              <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[220px]">
+            <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[220px]">
                 <strong style={{ color: '#a855f7' }}>
-                  #{i + 1} RECOMMENDED · ZIP {rec.zip}
+                #{i + 1} RECOMMENDED · ZIP {rec.zip}
                 </strong><br />
                 <span>
-                  Score: {(rec.placement_score * 100).toFixed(1)} · Gap:{' '}
-                  {rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}
+                Score: {(rec.placement_score * 100).toFixed(1)} · Gap:{' '}
+                {rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}
                 </span><br />
                 <span>{rec.snap_households?.toLocaleString()} SNAP households</span><br />
                 <span style={{ color: '#d1d5db' }}>{rec.explanation}</span>
-              </div>
+            </div>
             </Tooltip>
-          </CircleMarker>
+        </Marker>
         ))}
       </MapContainer>
     </div>

@@ -14,14 +14,25 @@ const supabase = createClient(
 const NYC_GREATER_METRO_AREA_CENTER = [40.7928, -73.9310]
 const NYC_GREATER_METRO_AREA_ZOOM = 12
 
-const pantryIcon = new L.Icon({
-  iconUrl: 'https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png',
-  iconSize: [27, 43],
-  iconAnchor: [13, 43],
-  popupAnchor: [1, -34],
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  shadowSize: [41, 41]
-})
+function makePinIcon(color = '#3b82f6') {
+  return L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width: 18px;
+        height: 18px;
+        background: ${color};
+        border: 2px solid white;
+        border-radius: 9999px 9999px 9999px 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      "></div>
+    `,
+    iconSize: [18, 18],
+    iconAnchor: [9, 18],
+    popupAnchor: [0, -18]
+  })
+}
 
 function FlyToCenter({ center, zoom, shouldFly }) {
   const map = useMap()
@@ -30,7 +41,7 @@ function FlyToCenter({ center, zoom, shouldFly }) {
     if (shouldFly) {
       map.flyTo(center, zoom, { duration: 1.2 })
     }
-  }, [center[0], center[1], zoom, shouldFly])
+  }, [map, center, zoom, shouldFly])
 
   return null
 }
@@ -95,6 +106,20 @@ function buildRowsWithScore(rows, mode) {
     }))
   }
 
+  if (mode === 'nearest_pantry_distance') {
+    return rows.map((r) => {
+      const dist = Number(r.nearest_pantry_miles ?? 0)
+      const score = Math.min(Math.max(dist / 0.5, 0), 1)
+
+      return {
+        ...r,
+        _score: score,
+        _label: 'Nearest pantry distance',
+        _valueText: r.nearest_pantry_miles != null ? `${dist.toFixed(2)} mi` : '—'
+      }
+    })
+  }
+
   if (mode === 'snap_population_vs_pantry_count') {
     const snapNormRows = normalize(rows, 'snap_households')
     const pantryNormRows = normalize(rows, 'pantry_count_nearby')
@@ -140,9 +165,9 @@ function buildRowsWithScore(rows, mode) {
         ? (r.snap_households - snapHouseholdMin) / snapHouseholdRange
         : 0
 
-    const distNorm =
+      const distNorm =
       typeof r.nearest_pantry_miles === 'number' && !Number.isNaN(r.nearest_pantry_miles)
-        ? (r.nearest_pantry_miles - distMin) / distRange
+        ? Math.min(Math.max(r.nearest_pantry_miles / 0.5, 0), 1)
         : 0
 
     const badness = (snapPopulationNorm + distNorm) / 2
@@ -176,24 +201,6 @@ function getColor(score, mode) {
   if (score >= 0.25) return '#84cc16'
   return '#22c55e'
 }
-
-function isNycZip(zip) {
-  const s = String(zip || '')
-  return (
-    s.startsWith('100') ||
-    s.startsWith('101') ||
-    s.startsWith('102') ||
-    s.startsWith('103') ||
-    s.startsWith('104') ||
-    s.startsWith('111') ||
-    s.startsWith('112') ||
-    s.startsWith('113') ||
-    s.startsWith('114') ||
-    s.startsWith('116')
-  )
-}
-
-
 
 function isNyOrNjZip(zip) {
   const s = String(zip || '').padStart(5, '0')
@@ -254,7 +261,7 @@ function SnapLayer({ rows, mode }) {
   })
 }
 
-export default function HeatMapView({
+export default function HeatMapViewNYNJ({
   resources,
   clusterMap = {},
   placementRecs = [],
@@ -267,8 +274,9 @@ export default function HeatMapView({
   const center = NYC_GREATER_METRO_AREA_CENTER
   const zoom = NYC_GREATER_METRO_AREA_ZOOM
 
-  const validResources = (resources || []).filter(
-    (r) => r.latitude && r.longitude && isNyOrNjResource(r)
+  const validResources = useMemo(
+    () => (resources || []).filter((r) => r.latitude && r.longitude && isNyOrNjResource(r)),
+    [resources]
   )
 
   useEffect(() => {
@@ -324,20 +332,12 @@ export default function HeatMapView({
           zip: g.zip,
           zip_lat: Number(g.zip_lat),
           zip_lon: Number(g.zip_lon),
-          pantry_count_nearby:
-            g.pantry_count_nearby == null ? null : Number(g.pantry_count_nearby),
-          nearest_pantry_miles:
-            g.nearest_pantry_miles == null ? 10 : Number(g.nearest_pantry_miles),
+          pantry_count_nearby: g.pantry_count_nearby == null ? null : Number(g.pantry_count_nearby),
+          nearest_pantry_miles: g.nearest_pantry_miles == null ? 10 : Number(g.nearest_pantry_miles),
           snap_households: demoMap[g.zip]?.snap_households ?? null,
           total_households: demoMap[g.zip]?.total_households ?? null,
-          snap_rate:
-            demoMap[g.zip]?.snap_rate == null
-              ? null
-              : Number(demoMap[g.zip].snap_rate),
-          poverty_rate:
-            demoMap[g.zip]?.poverty_rate == null
-              ? null
-              : Number(demoMap[g.zip].poverty_rate),
+          snap_rate: demoMap[g.zip]?.snap_rate == null ? null : Number(demoMap[g.zip].snap_rate),
+          poverty_rate: demoMap[g.zip]?.poverty_rate == null ? null : Number(demoMap[g.zip].poverty_rate),
           limited_english_pct:
             demoMap[g.zip]?.limited_english_pct == null
               ? null
@@ -351,8 +351,9 @@ export default function HeatMapView({
     load()
   }, [])
 
-  const filteredPlacementRecs = placementRecs.filter(
-    (r) => r.zip_lat && r.zip_lon && isNyOrNjZip(r.zip)
+  const filteredPlacementRecs = useMemo(
+    () => placementRecs.filter((r) => r.zip_lat && r.zip_lon && isNyOrNjZip(r.zip)),
+    [placementRecs]
   )
 
   return (
@@ -372,23 +373,27 @@ export default function HeatMapView({
         <SnapLayer rows={rows} mode={mode} />
 
         {validResources.map((r) => {
-          const cluster = clusterMap?.[r.id]
-          const { color } = getRiskLabel(r.riskScore ?? 0)
-          const fillColor = cluster?.color ?? color
+          const markerStyle = clusterMap?.[r.id]
+          const fallbackRisk = getRiskLabel(r.riskScore ?? 0)
+          const pinColor = markerStyle?.color ?? fallbackRisk.color ?? '#3b82f6'
+          const pinLabel = markerStyle?.label ?? fallbackRisk.label
+          const pinIcon = makePinIcon(pinColor)
 
-          const typeName = lang === 'es'
-            ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
-            : (r.resourceType?.name ?? '')
+          const typeName =
+            lang === 'es'
+              ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
+              : (r.resourceType?.name ?? '')
 
-          const desc = lang === 'es'
-            ? (r.description_es ?? r.description ?? '')
-            : (r.description ?? '')
+          const desc =
+            lang === 'es'
+              ? (r.description_es ?? r.description ?? '')
+              : (r.description ?? '')
 
           return (
             <Marker
               key={`resource-${r.id}`}
               position={[r.latitude, r.longitude]}
-              icon={pantryIcon}
+              icon={pinIcon}
             >
               <Tooltip>
                 <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
@@ -396,7 +401,7 @@ export default function HeatMapView({
                   <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
                   {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
                   {r._count?.reviews ? ` (${r._count.reviews} ${t('reviews').toLowerCase()})` : ''}<br />
-                  {cluster?.label && <span className="text-status-warning">📍 {cluster.label}</span>}
+                  <span style={{ color: pinColor }}>📍 {pinLabel}</span>
                   {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
                   {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
                 </div>
