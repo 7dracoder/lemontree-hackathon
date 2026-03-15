@@ -7,6 +7,8 @@ import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import HeatMapView from '../components/HeatMapView'
+import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
+
 import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
 
@@ -51,6 +53,8 @@ function usePlacementRecommendations() {
 export default function GovDashboard() {
   const [filters, setFilters] = useState({})
   const [heatMode, setHeatMode] = useState('snap_rate')
+  const [nyHeatMode, setNyHeatMode] = useState('snap_rate')
+
 
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { recs, loading: recsLoading } = usePlacementRecommendations()
@@ -58,24 +62,24 @@ export default function GovDashboard() {
   const clusterMap = useMemo(() => clusterResources(data), [data])
 
   const flyerCoords = useMemo(() => {
-    const r = data.find(x => x.latitude && x.longitude)
+    const r = data.find((x) => x.latitude && x.longitude)
     if (!r) return null
     return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Region' }
   }, [data])
 
   const clusterDist = useMemo(() => {
     const counts = [0, 0, 0, 0]
-    Object.values(clusterMap).forEach(v => counts[v.cluster]++)
+    Object.values(clusterMap).forEach((v) => counts[v.cluster]++)
     return counts.map((count, i) => ({
       label: t(CLUSTER_LABELS_KEY[i]),
       count,
       color: CLUSTER_COLORS[i],
     }))
-  }, [clusterMap, lang])
+  }, [clusterMap, t, lang])
 
   const barrierByState = useMemo(() => {
     const m = {}
-    data.forEach(r => {
+    data.forEach((r) => {
       if (!r.state) return
       if (!m[r.state]) m[r.state] = { sum: 0, count: 0 }
       m[r.state].sum += computeBarrierIndex(r)
@@ -88,7 +92,7 @@ export default function GovDashboard() {
   }, [data])
 
   const capacityData = useMemo(() => {
-    const atCapacity = data.filter(r => !r.occurrences?.some(o => !o.skippedAt)).length
+    const atCapacity = data.filter((r) => !r.occurrences?.some((o) => !o.skippedAt)).length
     const total = data.length || 1
     return [
       { name: 'At Capacity', value: atCapacity, pct: ((atCapacity / total) * 100).toFixed(1) },
@@ -98,7 +102,7 @@ export default function GovDashboard() {
 
   const lowConfidenceByState = useMemo(() => {
     const m = {}
-    data.forEach(r => {
+    data.forEach((r) => {
       if (!r.state || (r.confidence ?? 1) >= 0.5) return
       m[r.state] = (m[r.state] ?? 0) + 1
     })
@@ -112,7 +116,7 @@ export default function GovDashboard() {
     { label: 'Total Resources', value: data.length.toLocaleString(), ...KPI_CONFIG[0] },
     { label: `${t('foodDesert')} Zones`, value: clusterDist[3]?.count ?? 0, ...KPI_CONFIG[1] },
     { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
-    { label: 'Low Confidence', value: data.filter(r => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
+    { label: 'Low Confidence', value: data.filter((r) => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) {
@@ -302,7 +306,7 @@ export default function GovDashboard() {
             >
               Language Barrier Rate
             </button>
-            
+
             <button
               onClick={() => setHeatMode('pantry_count')}
               className={`px-3 py-2 border text-xs uppercase tracking-widest ${
@@ -313,7 +317,6 @@ export default function GovDashboard() {
             >
               Pantry Count
             </button>
-
 
             <button
               onClick={() => setHeatMode('snap_vs_distance')}
@@ -348,6 +351,7 @@ export default function GovDashboard() {
         />
       </div>
 
+    
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
@@ -402,6 +406,97 @@ export default function GovDashboard() {
         )}
       </div>
 
+      <div className="bg-card border border-border p-5">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
+              NY / NJ Heatmap
+            </h3>
+            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
+              {'// '}Tri-state zoomed view focused on NY and NJ ZIPs
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setNyHeatMode('snap_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'snap_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Rate
+            </button>
+
+            <button
+              onClick={() => setNyHeatMode('poverty_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'poverty_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Poverty Rate
+            </button>
+
+            <button
+              onClick={() => setNyHeatMode('language_barrier_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'language_barrier_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Language Barrier Rate
+            </button>
+
+            <button
+              onClick={() => setNyHeatMode('pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Pantry Count
+            </button>
+
+            <button
+              onClick={() => setNyHeatMode('snap_vs_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'snap_vs_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Distance to Pantry
+            </button>
+
+            <button
+              onClick={() => setNyHeatMode('snap_population_vs_pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                nyHeatMode === 'snap_population_vs_pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Pantry Count
+            </button>
+          </div>
+        </div>
+
+        <HeatMapViewNYNJ
+          resources={data}
+          clusterMap={clusterMap}
+          placementRecs={recs}
+          height="500px"
+          mode={nyHeatMode}
+        />
+      </div>
+
+
+
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between">
           <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">High-Priority Resources</h3>
@@ -411,17 +506,17 @@ export default function GovDashboard() {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
               <tr>
-                {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map(h => (
+                {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {data
-                .filter(r => (r.riskScore ?? 0) >= 60)
+                .filter((r) => (r.riskScore ?? 0) >= 60)
                 .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
                 .slice(0, 50)
-                .map(r => (
+                .map((r) => (
                   <tr key={r.id} className="hover:bg-surface transition-colors">
                     <td className="px-4 py-3 text-primary truncate max-w-[160px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
                     <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}</td>
@@ -438,11 +533,10 @@ export default function GovDashboard() {
           </table>
         </div>
       </div>
-      {/* Travel Burden Analysis */}
+
       <div className="chart-card">
         <TravelBurdenPanel resources={data} />
       </div>
-      
     </div>
   )
 }
