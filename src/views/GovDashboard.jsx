@@ -238,9 +238,7 @@ export default function GovDashboard() {
         </div>
       </div>
       {/* Travel Burden Analysis */}
-      <div className="chart-card">
-        <TravelBurdenPanel resources={data} />
-      </div>
+      <TravelBurdenPanel resources={data} />
       
     </div>
   )
