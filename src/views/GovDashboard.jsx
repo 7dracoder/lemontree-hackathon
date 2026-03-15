@@ -205,7 +205,7 @@ export default function GovDashboard() {
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
               <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
-            </div>
+            </>
           )
         })}
       </div>
