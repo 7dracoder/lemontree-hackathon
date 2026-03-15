@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { MapPin, Shield, AlertTriangle, Eye } from 'lucide-react'
+import { MapPin, Shield, AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
-import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
+import { computeBarrierIndex } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import ExportButton from '../components/ExportButton'
@@ -23,13 +23,62 @@ export default function GovDashboard() {
   const [filters, setFilters] = useState({})
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
-  const clusterMap = useMemo(() => clusterResources(data), [data])
+  const [clusterMap, setClusterMap] = useState({})
+  const [clusterLoading, setClusterLoading] = useState(false)
+  const [displayData, setDisplayData] = useState([])
+  const workerRef = useRef(null)
+  const runIdRef = useRef(0)
+  const pendingDataRef = useRef(null)
+
+  // Run K-Means in a Web Worker; only update displayData when worker finishes so spinner shows first (no freeze)
+  useEffect(() => {
+    if (!data?.length) {
+      setDisplayData([])
+      setClusterMap({})
+      setClusterLoading(false)
+      return
+    }
+
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL('../workers/clusterWorker.js', import.meta.url),
+        { type: 'module' }
+      )
+      workerRef.current.onmessage = (e) => {
+        const { ok, result, runId } = e.data ?? {}
+        if (runId !== runIdRef.current) return
+        if (ok) {
+          setClusterMap(result ?? {})
+          if (pendingDataRef.current?.runId === runId) setDisplayData(pendingDataRef.current.data)
+        }
+        setClusterLoading(false)
+      }
+      workerRef.current.onerror = () => {
+        runIdRef.current += 1
+        setClusterLoading(false)
+      }
+    }
+
+    const thisRun = ++runIdRef.current
+    pendingDataRef.current = { runId: thisRun, data }
+    setClusterLoading(true)
+    workerRef.current.postMessage({ resources: data, runId: thisRun })
+
+    return () => {
+      runIdRef.current += 1
+    }
+  }, [data])
+
+  useEffect(() => {
+    const w = workerRef.current
+    return () => { w?.terminate(); workerRef.current = null }
+  }, [])
 
   const flyerCoords = useMemo(() => {
-    const r = data.find(x => x.latitude && x.longitude)
+    const r = displayData.find(x => x.latitude && x.longitude)
     if (!r) return null
     return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Region' }
-  }, [data])
+  }, [displayData])
 
   const clusterDist = useMemo(() => {
     const counts = [0, 0, 0, 0]
@@ -43,7 +92,7 @@ export default function GovDashboard() {
 
   const barrierByState = useMemo(() => {
     const m = {}
-    data.forEach(r => {
+    displayData.forEach(r => {
       if (!r.state) return
       if (!m[r.state]) m[r.state] = { sum: 0, count: 0 }
       m[r.state].sum += computeBarrierIndex(r)
@@ -53,20 +102,20 @@ export default function GovDashboard() {
       .map(([state, v]) => ({ state, barrier: parseFloat((v.sum / v.count).toFixed(2)) }))
       .sort((a, b) => b.barrier - a.barrier)
       .slice(0, 12)
-  }, [data])
+  }, [displayData])
 
   const capacityData = useMemo(() => {
-    const atCapacity = data.filter(r => !r.occurrences?.some(o => !o.skippedAt)).length
-    const total = data.length || 1
+    const atCapacity = displayData.filter(r => !r.occurrences?.some(o => !o.skippedAt)).length
+    const total = displayData.length || 1
     return [
       { name: 'At Capacity', value: atCapacity, pct: ((atCapacity / total) * 100).toFixed(1) },
       { name: 'Available', value: total - atCapacity, pct: (((total - atCapacity) / total) * 100).toFixed(1) },
     ]
-  }, [data])
+  }, [displayData])
 
   const lowConfidenceByState = useMemo(() => {
     const m = {}
-    data.forEach(r => {
+    displayData.forEach(r => {
       if (!r.state || (r.confidence ?? 1) >= 0.5) return
       m[r.state] = (m[r.state] ?? 0) + 1
     })
@@ -74,13 +123,13 @@ export default function GovDashboard() {
       .map(([state, count]) => ({ state, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
-  }, [data])
+  }, [displayData])
 
   const kpis = [
-    { label: 'Total Resources', value: data.length.toLocaleString(), ...KPI_CONFIG[0] },
+    { label: 'Total Resources', value: displayData.length.toLocaleString(), ...KPI_CONFIG[0] },
     { label: `${t('foodDesert')} Zones`, value: clusterDist[3]?.count ?? 0, ...KPI_CONFIG[1] },
     { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
-    { label: 'Low Confidence', value: data.filter(r => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
+    { label: 'Low Confidence', value: displayData.filter(r => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) return (
@@ -93,7 +142,20 @@ export default function GovDashboard() {
   )
 
   return (
-    <div id="gov-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
+    <>
+      {clusterLoading && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 size={48} className="text-white animate-spin" />
+            <span className="text-sm font-bold tracking-widest uppercase text-white/90">Computing clusters…</span>
+          </div>
+        </div>
+      )}
+      <div id="gov-dashboard" className="p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border pb-6">
         <div>
           <h1 className="text-4xl font-display font-bold text-primary tracking-tighter uppercase">
@@ -101,7 +163,7 @@ export default function GovDashboard() {
           </h1>
           <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('govHeadline')}</p>
         </div>
-        <ExportButton data={data} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
+        <ExportButton data={displayData} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />
@@ -125,7 +187,7 @@ export default function GovDashboard() {
       </div>
 
       {/* Cluster Distribution */}
-      <div className="bg-card border border-border p-5">
+      <div className="bg-card border border-border p-5 relative">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Food Desert {t('cluster')} Distribution</h3>
         <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources clustered by location, rating, and access barriers</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -176,7 +238,7 @@ export default function GovDashboard() {
       </div>
 
       {/* Map */}
-      <div className="bg-card border border-border p-5">
+      <div className="bg-card border border-border p-5 relative">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
         <div className="flex gap-4 mb-3 flex-wrap">
           {CLUSTER_LABELS_KEY.map((k, i) => (
@@ -186,7 +248,7 @@ export default function GovDashboard() {
             </span>
           ))}
         </div>
-        <MapView resources={data} clusterMap={clusterMap} height="380px" />
+        <MapView resources={displayData} clusterMap={clusterMap} height="380px" />
       </div>
 
       {/* Priority Table */}
@@ -205,7 +267,7 @@ export default function GovDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {data
+              {displayData
                 .filter(r => (r.riskScore ?? 0) >= 60)
                 .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
                 .slice(0, 50)
@@ -228,9 +290,9 @@ export default function GovDashboard() {
       </div>
       {/* Travel Burden Analysis */}
       <div className="chart-card">
-        <TravelBurdenPanel resources={data} />
+        <TravelBurdenPanel resources={displayData} />
       </div>
-      
-    </div>
+      </div>
+    </>
   )
 }
