@@ -12,6 +12,9 @@ const supabase = createClient(
 
 const NYC = [40.7128, -74.0060]
 
+const DEFAULT_CENTER = [39.5, -98.35]
+const DEFAULT_ZOOM = 4
+
 
 function FlyToCenter({ center, zoom, shouldFly }) {
  const map = useMap()
@@ -233,20 +236,8 @@ export default function HeatMapView({
 }) {
  const [rows, setRows] = useState([])
 
-
- const valid = (resources || []).filter((r) => r.latitude && r.longitude)
-
-
- const center = valid.length > 0
-   ? [
-       valid.reduce((sum, r) => sum + r.latitude, 0) / valid.length,
-       valid.reduce((sum, r) => sum + r.longitude, 0) / valid.length,
-     ]
-   : NYC
-
-
- const zoom = valid.length > 0 ? 10 : 12
-
+ const center = DEFAULT_CENTER
+ const zoom = DEFAULT_ZOOM
 
  useEffect(() => {
    async function load() {
@@ -338,8 +329,8 @@ export default function HeatMapView({
  return (
    <div style={{ height }} className="border border-border">
     <MapContainer
-    center={NYC}
-    zoom={12}
+    center={center}
+    zoom={zoom}
     style={{ height: '100%', width: '100%' }}
     >
     <TileLayer
