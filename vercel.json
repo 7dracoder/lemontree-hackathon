@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://platform.foodhelpline.org/api/:path*"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
     }
   ]
 }

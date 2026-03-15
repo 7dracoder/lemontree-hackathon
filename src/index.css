@@ -178,6 +178,26 @@ input:focus, select:focus, textarea:focus, button:focus {
   border: 1px solid var(--color-border);
 }
 
+.leaflet-tooltip {
+  max-width: 260px !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  background: var(--color-card) !important;
+  color: var(--color-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+}
+
+.leaflet-tooltip-top::before { border-top-color: var(--color-border) !important; }
+.leaflet-tooltip-bottom::before { border-bottom-color: var(--color-border) !important; }
+.leaflet-tooltip-left::before { border-left-color: var(--color-border) !important; }
+.leaflet-tooltip-right::before { border-right-color: var(--color-border) !important; }
+
 /* ── Tooltip override ──────────────────────────────── */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
   background: var(--color-card) !important;
