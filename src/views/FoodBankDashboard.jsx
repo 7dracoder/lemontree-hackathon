@@ -13,6 +13,18 @@ import ExportButton from '../components/ExportButton'
 import ResourceReviews from '../components/ResourceReviews'
 import SentimentPanel from '../components/SentimentPanel'
 import GoogleReviewsPanel from '../components/GoogleReviewsPanel'
+import MetricTooltip from '../components/MetricTooltip'
+
+const METRIC_TIPS = {
+  totalResources: 'Total number of food pantries, banks, and assistance programs currently tracked in the system.',
+  ratingAvg: 'Average user rating across all resources (1–5 stars). Only resources with at least one review are included.',
+  totalReviews: 'Sum of all user-submitted reviews across every listed resource.',
+  highRisk: 'Resources with a risk score ≥ 60, indicating low ratings, few reviews, or data quality issues.',
+  ratingDist: 'Histogram of resources grouped by their rounded average rating (1–5 stars).',
+  riskDist: 'Pie chart showing how resources split across low (<30), medium (30–59), and high (≥60) risk scores.',
+  typeDist: 'Breakdown of resources by their category (e.g. Food Pantry, SNAP, Meals on Wheels).',
+}
+
 const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
 
 const RADIAN = Math.PI / 180
@@ -85,10 +97,10 @@ export default function FoodBankDashboard() {
     : '—'
 
   const kpis = [
-    { label: 'Total Resources', value: data.length, ...KPI_CONFIG[0] },
-    { label: t('ratingAverage'), value: avgRating, ...KPI_CONFIG[1] },
-    { label: t('totalReviews'), value: data.reduce((s, r) => s + (r._count?.reviews ?? 0), 0).toLocaleString(), ...KPI_CONFIG[2] },
-    { label: 'High Risk', value: data.filter(r => (r.riskScore ?? 0) >= 60).length, ...KPI_CONFIG[3] },
+    { label: 'Total Resources', value: data.length, tip: METRIC_TIPS.totalResources, ...KPI_CONFIG[0] },
+    { label: t('ratingAverage'), value: avgRating, tip: METRIC_TIPS.ratingAvg, ...KPI_CONFIG[1] },
+    { label: t('totalReviews'), value: data.reduce((s, r) => s + (r._count?.reviews ?? 0), 0).toLocaleString(), tip: METRIC_TIPS.totalReviews, ...KPI_CONFIG[2] },
+    { label: 'High Risk', value: data.filter(r => (r.riskScore ?? 0) >= 60).length, tip: METRIC_TIPS.highRisk, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) return (
@@ -126,7 +138,7 @@ export default function FoodBankDashboard() {
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">{kpi.label}</div>
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
             </div>
           )
         })}
@@ -135,7 +147,7 @@ export default function FoodBankDashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Rating Distribution</h3>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Rating Distribution<MetricTooltip text={METRIC_TIPS.ratingDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Count of resources by rating bucket</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={ratingDist}>
@@ -148,7 +160,7 @@ export default function FoodBankDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('risk')} Distribution</h3>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('risk')} Distribution<MetricTooltip text={METRIC_TIPS.riskDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Count of resources by risk level</p>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -161,7 +173,7 @@ export default function FoodBankDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('type')} Breakdown</h3>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('type')} Breakdown<MetricTooltip text={METRIC_TIPS.typeDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Distribution of resource types</p>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
