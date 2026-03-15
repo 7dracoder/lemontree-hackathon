@@ -7,6 +7,7 @@ import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import ExportButton from '../components/ExportButton'
+import TravelBurdenPanel from '../components/TravelBurdenPanel'
 
 const CLUSTER_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
 const CLUSTER_LABELS_KEY = ['wellServed', 'moderateAccess', 'strained', 'foodDesert']
