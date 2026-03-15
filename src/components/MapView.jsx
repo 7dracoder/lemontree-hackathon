@@ -54,7 +54,7 @@ export default function MapView({ resources, clusterMap = {}, height = '400px' }
               pathOptions={{ fillColor, color: fillColor, fillOpacity: 0.8, weight: 1 }}
             >
               <Tooltip>
-                <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
+                <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed text-primary">
                   <strong className="text-accent">{r.name ?? 'Unknown'}</strong><br />
                   <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
                   {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
