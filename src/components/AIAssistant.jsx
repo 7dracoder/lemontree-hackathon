@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Sparkles } from 'lucide-react'
 import OpenAI from 'openai'
 import { fetchResources, fetchResourceById, fetchResourceReviews } from '../api/lemontree'
 import { analyzeReviews } from '../utils/sentiment'
+import { computeRiskScore, computeBarrierIndex } from '../utils/mlScoring'
 
 const client = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY ?? '',
@@ -20,7 +21,7 @@ ML scores per resource: Risk Score (0–100): <30 low, 30–59 medium, ≥60 hig
 When referencing data from tool results, cite the relevant field names so the user can verify. 
 Give actionable recommendations where possible. 
 
-Do not use markdown or em dashes. Speak in typical prose. 
+Do not use markdown ibolding (**) for emphasis or headers. Provide all text in plain, unformatted format.
 
 `;
 
@@ -74,6 +75,7 @@ const TOOLS = [
 ]
 
 async function executeTool(name, args) {
+  console.log(`[AI Tool] ${name}`, args)
   if (name === 'search_resources') {
     const params = { take: args.take ?? 10 }
     if (args.lat != null) params.lat = args.lat
@@ -90,7 +92,11 @@ async function executeTool(name, args) {
       ratingAverage: r.ratingAverage,
       acceptingNewClients: r.acceptingNewClients,
       reviewCount: r._count?.reviews ?? 0,
+      subscriptions: r._count?.resourceSubscriptions ?? 0,
       resourceType: r.resourceType?.name,
+      confidence: r.confidence ?? null,
+      riskScore: computeRiskScore(r),
+      barrierIndex: computeBarrierIndex(r),
     }))
   }
 
@@ -116,7 +122,7 @@ async function executeTool(name, args) {
   return { error: `Unknown tool: ${name}` }
 }
 
-async function runAgent(conversationMessages) {
+async function runAgent(conversationMessages, onToolCall) {
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     ...conversationMessages.slice(-10),
@@ -143,6 +149,7 @@ async function runAgent(conversationMessages) {
         let result
         try {
           const args = JSON.parse(toolCall.function.arguments)
+          onToolCall?.(toolCall.function.name, args)
           result = await executeTool(toolCall.function.name, args)
         } catch (e) {
           result = { error: e.message }
@@ -182,7 +189,10 @@ export default function AIAssistant() {
     setInput('')
     setLoading(true)
     try {
-      const content = await runAgent([...messages, userMsg])
+      const agentMessages = [...messages, userMsg].filter(m => m.role !== 'tool')
+      const content = await runAgent(agentMessages, (toolName, args) => {
+        setMessages(prev => [...prev, { role: 'tool', content: `${toolName}(${JSON.stringify(args)})` }])
+      })
       setMessages(prev => [...prev, { role: 'assistant', content }])
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}. Check your VITE_OPENAI_API_KEY in .env` }])
@@ -219,13 +229,19 @@ export default function AIAssistant() {
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[85%] text-xs tracking-wide px-4 py-3 leading-relaxed border ${
-                  m.role === 'user'
-                    ? 'bg-accent/10 border-accent text-accent'
-                    : 'bg-page border-border text-primary'
-                }`}>
-                  {m.content}
-                </div>
+                {m.role === 'tool' ? (
+                  <div className="text-[10px] font-mono text-tertiary border border-border px-3 py-1.5 bg-surface tracking-wide max-w-full break-all">
+                    ⚙ {m.content}
+                  </div>
+                ) : (
+                  <div className={`max-w-[85%] text-xs tracking-wide px-4 py-3 leading-relaxed border ${
+                    m.role === 'user'
+                      ? 'bg-accent/10 border-accent text-accent'
+                      : 'bg-page border-border text-primary'
+                  }`}>
+                    {m.content}
+                  </div>
+                )}
               </div>
             ))}
             {loading && (

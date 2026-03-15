@@ -182,14 +182,14 @@ export default function FoodBankDashboard() {
 
       {/* Resource Table + Reviews */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card border border-border overflow-hidden">
-          <div className="p-5 border-b border-border flex items-center justify-between">
+        <div className="lg:col-span-2 bg-card border border-border overflow-hidden flex flex-col max-h-[700px]">
+          <div className="p-5 border-b border-border flex items-center justify-between shrink-0">
             <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Resources</h3>
             <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
               {'// '}click row to view reviews
             </span>
           </div>
-          <div className="overflow-auto max-h-80">
+          <div className="overflow-auto flex-1">
             <table className="w-full text-xs">
               <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
                 <tr>
@@ -222,7 +222,7 @@ export default function FoodBankDashboard() {
         </div>
 
         {/* Reviews side panel */}
-        <div className="bg-card border border-border p-5 overflow-auto max-h-[420px]">
+        <div className="bg-card border border-border p-5 overflow-auto max-h-[700px]">
           {selectedResource ? (
             <>
               <div className="mb-4 border-b border-border pb-4">
