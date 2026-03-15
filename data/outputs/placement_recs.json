@@ -1,0 +1,117 @@
+[
+  {
+    "zip": "57794",
+    "zip_lat": 43.120679,
+    "zip_lon": -102.407006,
+    "placement_score": 0.915806,
+    "snap_households": 166,
+    "snap_rate": 0.851282,
+    "coverage_gap": 1.0,
+    "utilization_rate": 0.0,
+    "pantry_count_nearby": 0,
+    "social_vulnerability_score": 0.5,
+    "transit_score": null,
+    "explanation": "166 SNAP households (85.1% of zip) \u00b7 nearest reliable pantry is nearest pantry \u00b7 21.7% limited English proficiency",
+    "feature_weights": {
+      "coverage_gap": 0.725133,
+      "snap_rate": 0.114478,
+      "poverty_rate": 0.076471,
+      "limited_english_pct": 0.076742,
+      "social_vulnerability_score": 0.0,
+      "transit_score": 0.007175
+    },
+    "model_r2": 0.238794
+  },
+  {
+    "zip": "87712",
+    "zip_lat": 35.883099,
+    "zip_lon": -105.16602,
+    "placement_score": 0.91129,
+    "snap_households": 145,
+    "snap_rate": 0.847953,
+    "coverage_gap": 1.0,
+    "utilization_rate": 0.0,
+    "pantry_count_nearby": 0,
+    "social_vulnerability_score": 0.5,
+    "transit_score": null,
+    "explanation": "145 SNAP households (84.8% of zip) \u00b7 nearest reliable pantry is nearest pantry \u00b7 12.8% limited English proficiency",
+    "feature_weights": {
+      "coverage_gap": 0.725133,
+      "snap_rate": 0.114478,
+      "poverty_rate": 0.076471,
+      "limited_english_pct": 0.076742,
+      "social_vulnerability_score": 0.0,
+      "transit_score": 0.007175
+    },
+    "model_r2": 0.238794
+  },
+  {
+    "zip": "41651",
+    "zip_lat": 37.467149,
+    "zip_lon": -82.755277,
+    "placement_score": 0.909571,
+    "snap_households": 126,
+    "snap_rate": 0.906475,
+    "coverage_gap": 1.0,
+    "utilization_rate": 0.0,
+    "pantry_count_nearby": 0,
+    "social_vulnerability_score": 0.5,
+    "transit_score": null,
+    "explanation": "126 SNAP households (90.6% of zip) \u00b7 nearest reliable pantry is nearest pantry",
+    "feature_weights": {
+      "coverage_gap": 0.725133,
+      "snap_rate": 0.114478,
+      "poverty_rate": 0.076471,
+      "limited_english_pct": 0.076742,
+      "social_vulnerability_score": 0.0,
+      "transit_score": 0.007175
+    },
+    "model_r2": 0.238794
+  },
+  {
+    "zip": "57772",
+    "zip_lat": 43.477183,
+    "zip_lon": -102.527554,
+    "placement_score": 0.906925,
+    "snap_households": 304,
+    "snap_rate": 0.737864,
+    "coverage_gap": 1.0,
+    "utilization_rate": 0.0,
+    "pantry_count_nearby": 0,
+    "social_vulnerability_score": 0.5,
+    "transit_score": null,
+    "explanation": "304 SNAP households (73.8% of zip) \u00b7 nearest reliable pantry is nearest pantry \u00b7 34.7% limited English proficiency",
+    "feature_weights": {
+      "coverage_gap": 0.725133,
+      "snap_rate": 0.114478,
+      "poverty_rate": 0.076471,
+      "limited_english_pct": 0.076742,
+      "social_vulnerability_score": 0.0,
+      "transit_score": 0.007175
+    },
+    "model_r2": 0.238794
+  },
+  {
+    "zip": "85926",
+    "zip_lat": 33.769253,
+    "zip_lon": -109.979275,
+    "placement_score": 0.906856,
+    "snap_households": 174,
+    "snap_rate": 0.75,
+    "coverage_gap": 1.0,
+    "utilization_rate": 0.0,
+    "pantry_count_nearby": 0,
+    "social_vulnerability_score": 0.5,
+    "transit_score": null,
+    "explanation": "174 SNAP households (75.0% of zip) \u00b7 nearest reliable pantry is nearest pantry \u00b7 40.0% limited English proficiency",
+    "feature_weights": {
+      "coverage_gap": 0.725133,
+      "snap_rate": 0.114478,
+      "poverty_rate": 0.076471,
+      "limited_english_pct": 0.076742,
+      "social_vulnerability_score": 0.0,
+      "transit_score": 0.007175
+    },
+    "model_r2": 0.238794
+  }
+]

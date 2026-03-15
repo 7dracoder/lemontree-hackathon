@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { MapPin, Shield, AlertTriangle, Eye } from 'lucide-react'
+import { MapPin, Shield, AlertTriangle, Eye, TrendingUp } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
 import { clusterResources, computeBarrierIndex } from '../utils/mlScoring'
@@ -18,9 +18,33 @@ const KPI_CONFIG = [
   { icon: Eye, accent: 'kpi-yellow', color: 'text-yellow-400', hex: '#FACC15' },
 ]
 
+function usePlacementRecommendations() {
+  const [recs, setRecs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/placement-recommendations')
+        if (res.ok) { setRecs(await res.json()); return }
+      } catch (_) {}
+      // Fallback to static JSON (works with npm run dev)
+      try {
+        const res = await fetch('/placement_recs.json')
+        if (res.ok) setRecs(await res.json())
+      } catch (_) {}
+      setLoading(false)
+    }
+    load().finally(() => setLoading(false))
+  }, [])
+
+  return { recs, loading }
+}
+
 export default function GovDashboard() {
   const [filters, setFilters] = useState({})
   const { data, all, isLoading, progress } = useFilteredResources(filters)
+  const { recs, loading: recsLoading } = usePlacementRecommendations()
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
 
@@ -184,8 +208,67 @@ export default function GovDashboard() {
               <span className="text-secondary uppercase tracking-wide">{t(k)}</span>
             </span>
           ))}
+          {recs.length > 0 && (
+            <span className="text-xs flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 inline-block rounded-full border-2 border-white" style={{ background: '#a855f7' }} />
+              <span className="text-secondary uppercase tracking-wide">Recommended Placement</span>
+            </span>
+          )}
         </div>
-        <MapView resources={data} clusterMap={clusterMap} height="380px" />
+        <MapView resources={data} clusterMap={clusterMap} placementRecs={recs} height="380px" />
+      </div>
+
+      {/* Placement Recommendations */}
+      <div className="bg-card border border-border overflow-hidden">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide flex items-center gap-2">
+              <TrendingUp size={14} className="text-green-400" />
+              Optimal New Pantry Locations
+            </h3>
+            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">{'// '}ML-ranked zip codes · SHAP-weighted need score</p>
+          </div>
+          {!recsLoading && recs[0]?.model_r2 != null && (
+            <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
+              Model R² {recs[0].model_r2.toFixed(3)}
+            </span>
+          )}
+        </div>
+        {recsLoading ? (
+          <div className="p-6 text-[11px] text-secondary uppercase tracking-widest animate-pulse">Loading...</div>
+        ) : recs.length === 0 ? (
+          <div className="p-6 text-[11px] text-secondary uppercase tracking-widest">No recommendations available</div>
+        ) : (
+          <div className="divide-y divide-border">
+            {recs.map((rec, i) => (
+              <div key={rec.zip} className="p-5 flex flex-col md:flex-row md:items-center gap-3 hover:bg-surface transition-colors">
+                <div className="flex items-center gap-3 min-w-[80px]">
+                  <span className="text-[10px] font-bold text-tertiary tracking-widest">#{i + 1}</span>
+                  <span className="text-lg font-display font-bold text-green-400">{rec.zip}</span>
+                </div>
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
+                  <div>
+                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Score</div>
+                    <div className="font-bold text-primary">{(rec.placement_score * 100).toFixed(1)}</div>
+                  </div>
+                  <div>
+                    <div className="text-tertiary uppercase tracking-widest mb-0.5">SNAP HH</div>
+                    <div className="font-bold text-yellow-400">{rec.snap_households?.toLocaleString() ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Coverage Gap</div>
+                    <div className="font-bold text-red-400">{rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-tertiary uppercase tracking-widest mb-0.5">Nearby Pantries</div>
+                    <div className="font-bold text-secondary">{rec.pantry_count_nearby ?? 0}</div>
+                  </div>
+                </div>
+                <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{rec.explanation}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Priority Table */}
