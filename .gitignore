@@ -8,3 +8,9 @@ dist/
 build_error.txt
 ai_changelog.md
 to_fix.txt
+.venv/
+
+# Data pipeline
+data/raw/
+data/ARCHITECTURE.md
+.vercel

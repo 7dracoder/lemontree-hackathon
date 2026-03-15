@@ -6,10 +6,9 @@ export default defineConfig({
   appType: 'spa',
   server: {
     proxy: {
-      '/api': {
+      '/api/resources': {
         target: 'https://platform.foodhelpline.org',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
       '/maps': {
         target: 'https://maps.googleapis.com',

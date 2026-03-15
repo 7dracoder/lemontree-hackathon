@@ -39,6 +39,21 @@ export function computeBarrierIndex(resource) {
   return Math.min(parseFloat(raw.toFixed(2)), 1)
 }
 
+export function getBarrierStyle(resource) {
+  const barrier = computeBarrierIndex(resource)
+
+  if (barrier >= 0.75) {
+    return { bucket: 3, color: '#ef4444', label: 'Severely Limited Access', barrier }
+  }
+  if (barrier >= 0.5) {
+    return { bucket: 2, color: '#f59e0b', label: 'Limited Access', barrier }
+  }
+  if (barrier >= 0.25) {
+    return { bucket: 1, color: '#3b82f6', label: 'Moderately Accessible', barrier }
+  }
+  return { bucket: 0, color: '#22c55e', label: 'Very Accessible', barrier }
+}
+
 export function clusterResources(resources, k = 4) {
   const pts = resources
     .filter(r => r.latitude && r.longitude)
@@ -76,7 +91,7 @@ export function clusterResources(resources, k = 4) {
   }
 
   const clusterColors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
-  const clusterLabels = ['Well Served', 'Moderate Access', 'Strained', 'Food Desert']
+  const clusterLabels = ['Very Accesible', 'Moderate Access', 'Strained', 'Food Desert']
   const result = {}
   pts.forEach(p => {
     let minDist = Infinity, assigned = 0
