@@ -71,7 +71,7 @@ export default function GovDashboard() {
     { color: '#3b82f6', label: 'Moderately Accessible' },
     { color: '#f59e0b', label: 'Limited Access' },
     { color: '#ef4444', label: 'Severely Limited Access' },
-    { color: '#a855f7', label: 'Recommended Placement' },
+    { color: '#a855f7', label: 'ML Recommended Placement' },
   ]
 
   const flyerCoords = useMemo(() => {
