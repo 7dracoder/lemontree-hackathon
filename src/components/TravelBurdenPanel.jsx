@@ -15,12 +15,16 @@ const SEVERITY_COLOR = {
   unknown: '#6b7280',
 }
 
+const BURDEN_EXPLANATION =
+  'Travel burden: how much farther residents must travel for a quality pantry vs. the nearest one. Surfaces ZIPs where the closest pantry is low-quality. ' +
+  'Inputs: distance to nearest pantry, distance to nearest good pantry. Good pantry: rating ≥2★, walk-in, above-median quality. 50 mi cap if none within 50 mi.'
+
 const METRIC_TIPS = {
-  highBurden: 'ZIP codes where residents must travel significantly farther to reach a quality-rated pantry than the nearest one.',
+  highBurden: 'ZIP codes where residents must travel much farther to reach a quality pantry vs. the nearest one.',
   mediumBurden: 'ZIP codes with moderate travel burden — some extra distance required for quality options.',
-  lowBurden: 'ZIP codes where the nearest pantry is already well-rated, requiring minimal extra travel.',
-  avgBurden: 'Average burden score across all analyzed ZIPs. Higher = more travel needed for quality food access.',
-  scatter: 'Each dot is a ZIP code. Points above the diagonal = people must travel farther for a quality pantry than the nearest one. Color = severity.',
+  lowBurden: 'ZIP codes where the nearest pantry is already well-rated. Minimal extra travel needed.',
+  avgBurden: 'Average burden score across all analyzed ZIPs. Inputs: distance to nearest pantry, distance to nearest good pantry. Higher = more travel needed for quality.',
+  scatter: 'Each dot is a ZIP code. X = distance to nearest pantry; Y = distance to nearest good pantry. Points above the diagonal require farther travel for quality. Color = severity.',
 }
 
 function ScatterTooltip({ active, payload }) {
@@ -36,13 +40,13 @@ function ScatterTooltip({ active, payload }) {
       <div className="text-secondary">
         Nearest <em>good</em> pantry:{' '}
         <span className="text-primary font-semibold">
-          {d.distToNearestGood != null ? `${d.distToNearestGood} mi` : 'N/A'}
+          {d.distToNearestGoodRaw != null ? `${d.distToNearestGoodRaw} mi` : 'N/A'}
         </span>
       </div>
       <div className="text-secondary">
         Local avg rating:{' '}
         <span className="text-primary font-semibold">
-          {d.avgLocalRating != null ? `⭐ ${d.avgLocalRating.toFixed(1)}` : 'N/A'}
+          {d.avgLocalRating != null ? `${d.avgLocalRating.toFixed(1)}` : 'N/A'}
         </span>
       </div>
       <div className="text-secondary">
@@ -105,10 +109,10 @@ export default function TravelBurdenPanel({ resources }) {
   if (!resources.length) return null
 
   const kpis = [
-    { label: 'High Burden ZIPs', value: summary.high, color: 'text-red-400', hex: '#F87171', icon: AlertTriangle, tip: METRIC_TIPS.highBurden },
-    { label: 'Medium Burden ZIPs', value: summary.medium, color: 'text-yellow-400', hex: '#FACC15', icon: Navigation, tip: METRIC_TIPS.mediumBurden },
-    { label: 'Low Burden ZIPs', value: summary.low, color: 'text-green-400', hex: '#4ADE80', icon: MapPin, tip: METRIC_TIPS.lowBurden },
-    { label: 'Avg Burden Score', value: `${summary.avgBurden}×`, color: 'text-blue-400', hex: '#60A5FA', icon: Star, tip: METRIC_TIPS.avgBurden },
+    { label: 'High Burden ZIPs',   value: summary.high,            color: 'text-red-400',    hex: '#F87171', icon: AlertTriangle, tip: METRIC_TIPS.highBurden },
+    { label: 'Medium Burden ZIPs', value: summary.medium,          color: 'text-yellow-400', hex: '#FACC15', icon: Navigation,    tip: METRIC_TIPS.mediumBurden },
+    { label: 'Low Burden ZIPs',    value: summary.low,             color: 'text-green-400',  hex: '#4ADE80', icon: MapPin,        tip: METRIC_TIPS.lowBurden },
+    { label: 'Avg Burden Score',   value: `${summary.avgBurden}×`, color: 'text-blue-400',   hex: '#60A5FA', icon: Star,          tip: METRIC_TIPS.avgBurden },
   ]
 
   return (
@@ -118,28 +122,14 @@ export default function TravelBurdenPanel({ resources }) {
         <h2 className="text-sm font-display font-bold text-primary uppercase tracking-wide flex items-center gap-2">
           <Navigation size={16} className="text-accent" />
           Travel Burden Analysis
+          <MetricTooltip text={BURDEN_EXPLANATION} />
         </h2>
         <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
           {'// '}ZIPs where the closest pantry is low-quality, forcing longer trips for good options
         </p>
       </div>
 
-      {/* Definitions */}
-      <div className="bg-card border border-border px-5 py-3 flex flex-wrap gap-x-6 gap-y-1.5 items-baseline">
-        <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary shrink-0">// Defs</span>
-        {[
-          { term: 'Burden Score', def: 'dist-to-good ÷ dist-to-nearest. Higher = more extra travel needed.' },
-          { term: 'High Burden', def: 'Score ≥ 3×.' },
-          { term: 'Good Pantry', def: 'Rating ≥ 3.5★, walk-in, above-median quality.' },
-          { term: '50mi Cap', def: 'No good pantry found within 50 mi — capped at 50 for scoring.' },
-        ].map(({ term, def }) => (
-          <span key={term} className="text-[10px] font-mono text-secondary">
-            <span className="text-primary font-bold uppercase tracking-wide">{term}:</span> {def}
-          </span>
-        ))}
-      </div>
-
-      {/* Summary KPIs */}
+      {/* KPI squares */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon
@@ -158,7 +148,7 @@ export default function TravelBurdenPanel({ resources }) {
         })}
       </div>
 
-      {/* Scatter: nearest-any vs nearest-good */}
+      {/* Scatter chart */}
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
           Nearest Pantry vs Nearest <em className="ml-1 mr-1">Good</em> Pantry — by ZIP
@@ -185,12 +175,7 @@ export default function TravelBurdenPanel({ resources }) {
               tick={{ fill: '#71717A', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              domain={[0, 'auto']}
-            />
-            <ReferenceLine
-              segment={[{ x: 0, y: 0 }, { x: 30, y: 30 }]}
-              stroke="var(--color-border)"
-              strokeDasharray="4 4"
+              domain={[0, 50]}
             />
             <Tooltip content={<ScatterTooltip />} />
             <Scatter data={scatterData}>
@@ -214,7 +199,7 @@ export default function TravelBurdenPanel({ resources }) {
       {mapZips.length > 0 && (
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-            🗺️ High / Medium Burden ZIP Centroids
+            High / Medium Burden ZIP Centroids
           </h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-3">
             {'// '}Each bubble = one ZIP. Size scales with burden score
@@ -243,7 +228,7 @@ export default function TravelBurdenPanel({ resources }) {
                       Burden: {z.burdenScore ?? 'N/A'}× · {z.resourceCount} pantries<br />
                       Nearest any: {z.distToNearest} mi<br />
                       Nearest good: {z.distToNearestGood ?? 'N/A'} mi<br />
-                      {z.avgLocalRating != null && `Avg local rating: ⭐ ${z.avgLocalRating.toFixed(1)}`}
+                      {z.avgLocalRating != null && `Avg local rating: ${z.avgLocalRating.toFixed(1)}`}
                     </div>
                   </LeafletTooltip>
                 </CircleMarker>
@@ -253,51 +238,7 @@ export default function TravelBurdenPanel({ resources }) {
         </div>
       )}
 
-      {/* Worst 10 */}
-      <div className="bg-card border border-border overflow-hidden">
-        <div className="p-5 border-b border-border">
-          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Top 10 Worst Burden ZIPs</h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">{'// '}Highest burden scores — orange badge = good pantry was beyond 50 mi (capped)</p>
-        </div>
-        <div className="overflow-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-card border-b border-border">
-              <tr>
-                {['ZIP', 'Nearest (mi)', 'Nearest Good (mi)', 'Burden Score', 'Severity'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {allZips.slice(0, 10).map(z => (
-                <tr key={z.zip} className="hover:bg-surface transition-colors">
-                  <td className="px-4 py-3 text-primary font-mono font-bold tracking-wide">{z.zip}</td>
-                  <td className="px-4 py-3 text-secondary font-mono">{z.distToNearest} mi</td>
-                  <td className="px-4 py-3 font-mono">
-                    <span className={z.goodCapped ? 'text-orange-400 font-bold' : 'text-secondary'}>
-                      {z.distToNearestGood} mi
-                    </span>
-                    {z.goodCapped && (
-                      <span className="ml-2 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border border-orange-500/30 bg-orange-500/10 text-orange-400">50mi cap</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-bold font-mono" style={{ color: SEVERITY_COLOR[z.severity] }}>
-                    {z.burdenScore}×
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5"
-                      style={{ background: `${SEVERITY_COLOR[z.severity]}15`, color: SEVERITY_COLOR[z.severity], border: `1px solid ${SEVERITY_COLOR[z.severity]}30` }}>
-                      {z.severity}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Table */}
+      {/* ZIP-level detail table */}
       <div className="bg-card border border-border overflow-hidden">
         <div className="p-5 border-b border-border flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">ZIP-level Detail</h3>
@@ -329,7 +270,7 @@ export default function TravelBurdenPanel({ resources }) {
           <table className="w-full text-xs">
             <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
               <tr>
-                {['ZIP', 'Pantries', 'Avg Rating', 'Nearest (mi)', 'Nearest Good (mi)', 'Burden Score', 'Severity', 'Nearest Good Pantry', '50mi Cap'].map(h => (
+                {['ZIP', 'Pantries', 'Avg Rating', 'Nearest (mi)', 'Nearest Good (mi)', 'Burden Score', 'Severity', 'Nearest Good Pantry'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest whitespace-nowrap">
                     {h}
                   </th>
@@ -342,11 +283,11 @@ export default function TravelBurdenPanel({ resources }) {
                   <td className="px-4 py-3 text-primary font-mono font-semibold tracking-wide">{z.zip}</td>
                   <td className="px-4 py-3 text-secondary">{z.resourceCount}</td>
                   <td className="px-4 py-3 text-secondary">
-                    {z.avgLocalRating != null ? `⭐ ${z.avgLocalRating.toFixed(1)}` : '—'}
+                    {z.avgLocalRating != null ? z.avgLocalRating.toFixed(1) : '—'}
                   </td>
                   <td className="px-4 py-3 text-primary">{z.distToNearest}</td>
                   <td className="px-4 py-3 text-primary">
-                    {z.distToNearestGood != null ? z.distToNearestGood : '—'}
+                    {z.distToNearestGoodRaw != null ? z.distToNearestGoodRaw : '—'}
                   </td>
                   <td className="px-4 py-3 font-bold" style={{ color: SEVERITY_COLOR[z.severity] }}>
                     {z.burdenScore != null ? `${z.burdenScore}×` : '—'}
@@ -367,12 +308,6 @@ export default function TravelBurdenPanel({ resources }) {
                     {z.nearestGoodName
                       ? `${z.nearestGoodName}${z.nearestGoodCity ? `, ${z.nearestGoodCity}` : ''}`
                       : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {z.goodCapped
-                      ? <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border border-orange-500/30 bg-orange-500/10 text-orange-400">CAPPED</span>
-                      : <span className="text-[10px] text-tertiary font-mono">—</span>
-                    }
                   </td>
                 </tr>
               ))}

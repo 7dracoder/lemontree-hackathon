@@ -12,7 +12,7 @@ export default function MetricTooltip({ text }) {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(s => !s)}
         className="text-tertiary hover:text-accent transition-colors cursor-help"
-        aria-label="Metric info"
+        aria-label="More information about this metric"
       >
         <HelpCircle size={12} />
       </button>

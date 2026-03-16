@@ -121,6 +121,7 @@ export function computeTravelBurden(resources) {
       avgLocalQuality: parseFloat(avgLocalQuality.toFixed(1)),
       distToNearest: parseFloat(distToNearest.toFixed(2)),
       distToNearestGood: parseFloat(distToNearestGood.toFixed(2)),
+      distToNearestGoodRaw: rawDistGood != null ? parseFloat(rawDistGood.toFixed(2)) : null,
       goodCapped,
       nearestGoodName: goodCapped ? null : (nearestGood?.name ?? null),
       nearestGoodCity: goodCapped ? null : (nearestGood?.city ?? null),

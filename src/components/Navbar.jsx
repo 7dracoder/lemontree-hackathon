@@ -167,14 +167,6 @@ export default function Navbar() {
                 >
                   <FileText size={13} className="text-accent" /> {t('exportPDF')}
                 </button>
-                {flyerCoords && (
-                  <button
-                    onClick={openFlyer}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs tracking-wide uppercase text-secondary hover:text-primary hover:bg-surface transition-all border-t border-border"
-                  >
-                    <Map size={13} className="text-accent" /> {t('downloadFlyer')}
-                  </button>
-                )}
               </div>
             )}
           </div>

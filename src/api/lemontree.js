@@ -13,21 +13,15 @@ export async function fetchResources(params = {}) {
   if (!res.ok) throw new Error(`API ${res.status}`)
   return parse(await res.json())
 }
-// Multi-page fetch with cursor pagination — loads all resources up to maxItems
-export async function fetchAllResources(params = {}, onProgress, maxItems = Infinity) {
+// Multi-page fetch with skip/take pagination — loads all resources
+export async function fetchAllResources(params = {}, onProgress) {
   let all = []
   let skip = 0
   const take = 100
   let total = null
 
   while (true) {
-    const qs = new URLSearchParams()
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
-    })
-    qs.set('take', String(take))
-    qs.set('skip', String(skip))
-
+    const qs = new URLSearchParams({ take: String(take), skip: String(skip), ...params })
     const res = await fetch(`${BASE}/api/resources?${qs}`)
     if (!res.ok) throw new Error(`API ${res.status}`)
     const data = parse(await res.json())
@@ -35,7 +29,7 @@ export async function fetchAllResources(params = {}, onProgress, maxItems = Infi
     if (total === null) total = data.count ?? 0
     all = [...all, ...resources]
     if (onProgress) onProgress(all.length, total)
-    if (resources.length < take || all.length >= maxItems) break
+    if (resources.length < take) break
     skip += take
   }
 

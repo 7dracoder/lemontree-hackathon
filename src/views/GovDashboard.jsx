@@ -53,36 +53,6 @@ const LEMONTREE_STATES = [
   { value: 'TX', label: 'Texas' },
 ]
 
-/** Derive 2-letter state from zip (matches data/placement_model.py zip_to_state) */
-function zipToState(zipStr) {
-  let z
-  try {
-    z = parseInt(String(zipStr || '').replace(/\D/g, ''), 10)
-    if (!Number.isFinite(z)) return null
-  } catch {
-    return null
-  }
-  const ranges = [
-    [601, 988, 'PR'], [1001, 2791, 'MA'], [2801, 2940, 'RI'], [3031, 3897, 'NH'],
-    [3901, 4992, 'ME'], [5001, 5907, 'VT'], [6001, 6928, 'CT'], [7001, 8989, 'NJ'],
-    [10001, 14975, 'NY'], [15001, 19640, 'PA'], [19701, 19980, 'DE'], [20001, 20599, 'DC'],
-    [20601, 21930, 'MD'], [22001, 24658, 'VA'], [24701, 26886, 'WV'], [27006, 28909, 'NC'],
-    [29001, 29948, 'SC'], [30001, 31999, 'GA'], [32004, 34997, 'FL'], [35004, 36925, 'AL'],
-    [37010, 38589, 'TN'], [38601, 39776, 'MS'], [40003, 42788, 'KY'], [43001, 45999, 'OH'],
-    [46001, 47997, 'IN'], [48001, 49971, 'MI'], [50001, 52809, 'IA'], [53001, 54990, 'WI'],
-    [55001, 56763, 'MN'], [57001, 57799, 'SD'], [58001, 58856, 'ND'], [59001, 59937, 'MT'],
-    [60001, 62999, 'IL'], [63001, 65899, 'MO'], [66002, 67954, 'KS'], [68001, 69367, 'NE'],
-    [70001, 71497, 'LA'], [71601, 72959, 'AR'], [73001, 74966, 'OK'], [75001, 79999, 'TX'],
-    [80001, 81658, 'CO'], [82001, 83128, 'WY'], [83201, 83876, 'ID'], [84001, 84784, 'UT'],
-    [85001, 86556, 'AZ'], [87001, 88441, 'NM'], [88901, 89883, 'NV'], [90001, 96162, 'CA'],
-    [96701, 96898, 'HI'], [97001, 97920, 'OR'], [98001, 99403, 'WA'], [99501, 99950, 'AK'],
-  ]
-  for (const [lo, hi, state] of ranges) {
-    if (lo <= z && z <= hi) return state
-  }
-  return null
-}
-
 function usePlacementRecommendations(state) {
   const [recs, setRecs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -90,19 +60,56 @@ function usePlacementRecommendations(state) {
   useEffect(() => {
     setLoading(true)
     async function load() {
-      const url = state
-        ? `/api/placement-recommendations?state=${encodeURIComponent(state)}`
-        : '/api/placement-recommendations'
+      if (state) {
+        try {
+          const { data: scores } = await _supabase
+            .from('zip_placement_scores')
+            .select('zip, placement_score, state')
+            .eq('state', state)
+            .order('placement_score', { ascending: false })
+            .limit(5)
+          if (scores?.length) {
+            const zips = scores.map((r) => r.zip)
+            const { data: geo } = await _supabase
+              .from('zip_coverage_gap')
+              .select('zip, zip_lat, zip_lon, snap_households, coverage_gap, pantry_count_nearby')
+              .in('zip', zips)
+            const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
+            setRecs(scores.map((r) => {
+              const g = geoMap[r.zip]
+              return {
+                ...r,
+                zip_lat: g?.zip_lat != null ? Number(g.zip_lat) : null,
+                zip_lon: g?.zip_lon != null ? Number(g.zip_lon) : null,
+                snap_households: g?.snap_households ?? null,
+                coverage_gap: g?.coverage_gap ?? null,
+                pantry_count_nearby: g?.pantry_count_nearby ?? null,
+              }
+            }))
+            setLoading(false)
+            return
+          }
+        } catch (_) {}
+      }
+      const url = '/api/placement-recommendations'
       try {
         const res = await fetch(url)
         if (res.ok) {
-          const data = await res.json()
-          setRecs(Array.isArray(data) ? data : [])
+          setRecs(await res.json())
           return
         }
       } catch (_) {}
-      setRecs([])
+
+      if (!state) {
+        try {
+          const res = await fetch('/placement_recs.json')
+          if (res.ok) setRecs(await res.json())
+        } catch (_) {}
+      }
+
+      setLoading(false)
     }
+
     load().finally(() => setLoading(false))
   }, [state])
 
@@ -110,21 +117,14 @@ function usePlacementRecommendations(state) {
 }
 
 export default function GovDashboard() {
-  const [heatMode, setHeatMode] = useState('snap_rate')
   const [nyHeatMode, setNyHeatMode] = useState('snap_rate')
   const [recState, setRecState] = useState('')
-  const [activeTab, setActiveTab] = useState('federal')
+  const [activeTab, setActiveTab] = useState('overview')
 
   const { data, isLoading, progress } = useResources({})
   const { recs, loading: recsLoading } = usePlacementRecommendations(recState)
   const { t, lang } = useTranslation()
   const { setExportState } = useExport()
-
-  // Filter recs by selected state (client-side safeguard — backend may return national)
-  const filteredRecs = useMemo(() => {
-    if (!recState) return recs
-    return recs.filter((r) => zipToState(r.zip) === recState)
-  }, [recs, recState])
 
   // Web Worker for K-Means clustering — keeps UI responsive
   const [clusterMap, setClusterMap] = useState({})
@@ -197,6 +197,16 @@ export default function GovDashboard() {
     { color: '#a855f7', label: 'ML Recommended Placement' },
   ]
 
+  const HEAT_OVERLAY_OPTIONS = [
+    { value: 'snap_rate', label: 'SNAP rate' },
+    { value: 'poverty_rate', label: 'Poverty rate' },
+    { value: 'language_barrier_rate', label: 'Language barrier' },
+    { value: 'pantry_count', label: 'Nearby pantry count' },
+    { value: 'nearest_pantry_distance', label: 'Nearest pantry distance' },
+    { value: 'snap_population_vs_pantry_count', label: 'SNAP vs pantry count' },
+    { value: 'snap_households_distance', label: 'SNAP + distance risk' },
+  ]
+
   const clusterDist = useMemo(() => {
     const counts = [0, 0, 0, 0]
     Object.values(clusterMap).forEach((v) => counts[v.cluster]++)
@@ -245,12 +255,12 @@ export default function GovDashboard() {
   }, [displayData])
 
   const kpis = [
-    { label: t('totalResources'), value: displayData.length.toLocaleString(), tip: 'Total number of food assistance resources currently loaded and displayed.', ...KPI_CONFIG[0] },
+    { label: t('totalResources'), value: displayData.length.toLocaleString(), tip: 'Total number of food assistance resources (pantries, banks, programs) currently loaded and displayed on the map.', ...KPI_CONFIG[0] },
     {
       label: t('foodDeserts'),
       value: clusterDist[3]?.count ?? 0,
       href: '#nyc-pantry-service-zones',
-      tip: 'Resources in the highest-need cluster — areas with low access, high barriers, and poor ratings.',
+      tip: 'Resources in the highest-need K-means cluster — areas with low access, high barriers, and poor ratings. Links to NY Pantry Service Zones map below.',
       ...KPI_CONFIG[1],
     },
     { label: t('atCapacity'), value: `${capacityData[0]?.pct ?? 0}%`, tip: 'Percentage of resources where all occurrences are skipped or the location is closed today.', ...KPI_CONFIG[2] },
@@ -358,7 +368,7 @@ export default function GovDashboard() {
 
         {/* Tab bar */}
         <div className="flex items-center bg-card border border-border">
-          {[{ id: 'federal', label: 'Federal' }, { id: 'ny', label: 'NY' }].map((tab, i) => (
+          {[{ id: 'overview', label: 'Overview' }, { id: 'ny', label: 'NY' }, { id: 'travel', label: 'Travel Burden' }].map((tab, i) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -373,7 +383,7 @@ export default function GovDashboard() {
           ))}
         </div>
 
-        {activeTab === 'federal' && <>
+        {activeTab === 'overview' && <>
           <div className="bg-card border border-border p-5 relative">
             <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
               Food Access Coverage Zones
@@ -403,7 +413,7 @@ export default function GovDashboard() {
             <div className="bg-card border border-border p-5">
               <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
                 {t('barrierIndex')} by State
-                <MetricTooltip text="Composite score (0–1) weighted across: requirement tags (30%), appointment-only access (25%), usage limits (20%), and no upcoming occurrences (25%). Higher = harder to access." />
+                <MetricTooltip text="Access Difficulty: how hard it is for residents to use this pantry (0–1). Inputs: requirement tags, appointment-only access, usage limits, no upcoming occurrences. Higher = more barriers." />
               </h3>
               <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
                 {'// '}Higher = more barriers (0–1 scale)
@@ -423,8 +433,9 @@ export default function GovDashboard() {
             </div>
 
             <div className="bg-card border border-border p-5">
-              <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+              <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
                 States with Most Unverified Resources
+                <MetricTooltip text="Count of resources with data confidence below 50% — info may be stale, incomplete, or unverified. Higher counts suggest areas needing data validation." />
               </h3>
               <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
                 {'// '}Low confidence (&lt;0.5) resources by state
@@ -441,7 +452,7 @@ export default function GovDashboard() {
           </div>
 
           <div className="bg-card border border-border p-5 relative">
-            <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
+            <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('mapTitle')} — Food Desert Zones</h3>
             <div className="flex gap-4 mb-3 flex-wrap">
               {CLUSTER_LABELS_KEY.map((k, i) => (
                 <span key={k} className="text-xs flex items-center gap-1.5">
@@ -459,11 +470,9 @@ export default function GovDashboard() {
               <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
                 <div>
                   <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-                    Pantry Need Heatmap
+                    Accessibility and Recommended Pantries
                   </h3>
-                  <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-                    Click toggles to explore different need indicators
-                  </p>
+                  <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">{'// '}Pantry coverage gaps and optimal placement recommendations</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">State</span>
@@ -478,29 +487,6 @@ export default function GovDashboard() {
                   </select>
                 </div>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {[
-                  { key: 'snap_rate', label: 'SNAP Rate' },
-                  { key: 'poverty_rate', label: 'Poverty Rate' },
-                  { key: 'language_barrier_rate', label: 'Language Barrier Rate' },
-                  { key: 'pantry_count', label: 'Pantry Count' },
-                  { key: 'nearest_pantry_distance', label: 'Distance to Pantry' },
-                  { key: 'snap_vs_distance', label: 'SNAP Pop + Distance to Pantry' },
-                  { key: 'snap_population_vs_pantry_count', label: 'SNAP Pop + Pantry Count' },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setHeatMode(key)}
-                    className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                      heatMode === key
-                        ? 'bg-yellow-400 text-black border-yellow-400'
-                        : 'bg-transparent text-white border-border'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Map */}
@@ -514,7 +500,7 @@ export default function GovDashboard() {
                   </div>
                 ))}
               </div>
-              <HeatMapView resources={data} clusterMap={barrierMap} placementRecs={recs} height="500px" mode={heatMode} />
+              <HeatMapView resources={data} clusterMap={barrierMap} placementRecs={recs} height="500px" mode="snap_rate" />
             </div>
 
             {/* Optimal New Pantry Locations table */}
@@ -524,6 +510,7 @@ export default function GovDashboard() {
                   <h4 className="text-sm font-display font-bold text-primary uppercase tracking-wide flex items-center gap-2">
                     <TrendingUp size={14} className="text-green-400" />
                     Optimal New Pantry Locations
+                    <MetricTooltip text="Placement Score = priority for siting a new pantry (higher = more urgent need). Inputs: coverage gap, SNAP rate, poverty rate, limited English share, social vulnerability, transit access, utilization rate. Model R² = how well the model explains utilization variation." />
                   </h4>
                   <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
                     {'// '}ML-ranked zip codes · SHAP-weighted need score
@@ -531,7 +518,7 @@ export default function GovDashboard() {
                   </p>
                 </div>
                 {!recsLoading && recs[0]?.model_r2 != null && (
-                  <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
+                  <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold" title="Model fit: how much utilization variation the placement model explains (0–1). Higher = stronger predictive signal.">
                     Model R² {recs[0].model_r2.toFixed(3)}
                   </span>
                 )}
@@ -549,7 +536,7 @@ export default function GovDashboard() {
                         <span className="text-lg font-display font-bold text-green-400">{rec.zip}</span>
                       </div>
                       <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">
-                        <div>
+                        <div title="Placement priority (0–100). Inputs: coverage gap, SNAP rate, poverty, limited English, social vulnerability, transit, utilization. Higher = better candidate.">
                           <div className="text-tertiary uppercase tracking-widest mb-0.5">Score</div>
                           <div className="font-bold text-primary">{(rec.placement_score * 100).toFixed(1)}</div>
                         </div>
@@ -574,6 +561,9 @@ export default function GovDashboard() {
             </div>
           </div>
 
+        </>}
+
+        {activeTab === 'travel' && <>
           <TravelBurdenPanel resources={displayData} />
         </>}
 
@@ -582,34 +572,21 @@ export default function GovDashboard() {
             <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
               <div>
                 <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
-                  NY Heatmap
+                  Accessibility and Recommended Pantries
                 </h3>
-                <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
-                  A closer look at pantry access across New York. Click toggles to explore different need indicators.
-                </p>
+                <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">{'// '}A closer look at pantry access across New York</p>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                {[
-                  { key: 'snap_rate', label: 'SNAP Rate' },
-                  { key: 'poverty_rate', label: 'Poverty Rate' },
-                  { key: 'language_barrier_rate', label: 'Language Barrier Rate' },
-                  { key: 'pantry_count', label: 'Pantry Count' },
-                  { key: 'nearest_pantry_distance', label: 'Distance to Pantry' },
-                  { key: 'snap_vs_distance', label: 'SNAP Pop + Distance to Pantry' },
-                  { key: 'snap_population_vs_pantry_count', label: 'SNAP Pop + Pantry Count' },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setNyHeatMode(key)}
-                    className={`px-3 py-2 border text-xs uppercase tracking-widest ${
-                      nyHeatMode === key
-                        ? 'bg-yellow-400 text-black border-yellow-400'
-                        : 'bg-transparent text-white border-border'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">Heat overlay</span>
+                <select
+                  value={nyHeatMode}
+                  onChange={(e) => setNyHeatMode(e.target.value)}
+                  className="text-[11px] bg-surface border border-border text-primary px-2 py-1 uppercase tracking-wide"
+                >
+                  {HEAT_OVERLAY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="text-[10px] uppercase tracking-widest text-secondary mb-2">Pantry Locations</div>
@@ -636,42 +613,6 @@ export default function GovDashboard() {
             <VoronoiCoverageMapNYNJ resources={data} clusterMap={barrierMap} height="620px" />
           </div>
 
-          <div className="bg-card border border-border overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">High-Priority Resources</h3>
-              <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">{t('riskScore')} ≥ 60</span>
-            </div>
-            <div className="overflow-auto max-h-64">
-              <table className="w-full text-xs">
-                <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
-                  <tr>
-                    {[t('name'), t('city'), t('state'), t('riskScore'), t('barrierIndex'), t('confidence'), t('cluster')].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {displayData
-                    .filter((r) => (r.riskScore ?? 0) >= 60)
-                    .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
-                    .slice(0, 50)
-                    .map((r) => (
-                      <tr key={r.id} className="hover:bg-surface transition-colors">
-                        <td className="px-4 py-3 text-primary truncate max-w-[160px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
-                        <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}</td>
-                        <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.state ?? '—'}</td>
-                        <td className="px-4 py-3 text-red-400 font-bold">{r.riskScore}</td>
-                        <td className="px-4 py-3 text-orange-400">{computeBarrierIndex(r).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-secondary">{r.confidence != null ? `${(r.confidence * 100).toFixed(0)}%` : '—'}</td>
-                        <td className="px-4 py-3 text-xs font-medium" style={{ color: clusterMap[r.id]?.color ?? '#71717A' }}>
-                          {clusterMap[r.id]?.label ?? '—'}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </>}
       </div>
     </>

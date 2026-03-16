@@ -21,9 +21,9 @@ const METRIC_TIPS = {
   totalResources: 'Total number of food pantries, banks, and assistance programs currently tracked in the system.',
   ratingAvg: 'Average user rating across all resources (1–5 stars). Only resources with at least one review are included.',
   totalReviews: 'Sum of all user-submitted reviews across every listed resource.',
-  highRisk: 'Resources with a risk score ≥ 60, indicating low ratings, few reviews, or data quality issues.',
+  highRisk: 'Reliability Score: how trustworthy the data is for this resource (higher = less reliable). Inputs: data confidence, upcoming sessions, closure periods, review count, appointment-only. ≥60 = high risk.',
   ratingDist: 'Histogram of resources grouped by their rounded average rating (1–5 stars).',
-  riskDist: 'Pie chart showing how resources split across low (<30), medium (30–59), and high (≥60) risk scores.',
+  riskDist: 'Reliability Score distribution: counts how many resources fall into low (<30), medium (30–59), and high (≥60) risk. Higher = less reliable data or harder to access.',
   typeDist: 'Breakdown of resources by their category (e.g. Food Pantry, SNAP, Meals on Wheels).',
 }
 
@@ -177,7 +177,7 @@ export default function FoodBankDashboard() {
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Rating Distribution<MetricTooltip text={METRIC_TIPS.ratingDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Count of resources by rating bucket</p>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={ratingDist}>
               <XAxis dataKey="stars" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -190,9 +190,9 @@ export default function FoodBankDashboard() {
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('risk')} Distribution<MetricTooltip text={METRIC_TIPS.riskDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Count of resources by risk level</p>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
-              <Pie data={riskDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={renderLabel} labelLine={false} stroke="none">
+              <Pie data={riskDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} stroke="none">
                 {riskDist.map((_, i) => <Cell key={i} fill={['#22C55E', '#FACC15', '#EF4444'][i]} />)}
               </Pie>
               <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: '#71717A', textTransform: 'uppercase' }} iconType="square" />
@@ -203,9 +203,9 @@ export default function FoodBankDashboard() {
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('type')} Breakdown<MetricTooltip text={METRIC_TIPS.typeDist} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Distribution of resource types</p>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
-              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} label={renderLabel} labelLine={false} stroke="none">
+              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} stroke="none">
                 {typeDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: '#71717A', textTransform: 'uppercase' }} iconType="square" />

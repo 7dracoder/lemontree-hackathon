@@ -15,10 +15,10 @@ const METRIC_TIPS = {
   resources: 'Total number of food resources matching your current filters.',
   subscriptions: 'Total user subscriptions across all resources — indicates community engagement.',
   totalReviews: 'Sum of all user-submitted reviews across every listed resource.',
-  avgRating: 'Average user rating (1–5 stars) across resources with at least one review.',
+  avgRating: 'Average user rating (1–5 stars) across resources with at least one review. Resources with no reviews are excluded.',
   top10: 'The 10 resources with the highest subscription counts (excludes zero-subscription resources).',
-  subsByType: 'How total subscriptions are distributed across resource categories.',
-  ratingDist: 'Resources grouped into four rating buckets to show overall quality distribution.',
+  subsByType: 'How total subscriptions are distributed across resource categories (e.g. Food Pantry, Soup Kitchen, SNAP).',
+  ratingDist: 'Resources grouped into five rating buckets (1–5 stars) to show overall quality distribution across the catalog.',
 }
 
 const COLORS = ['#facc15', '#22c55e', '#3b82f6', '#8b5cf6', '#f97316', '#ec4899', '#14b8a6', '#ef4444', '#6366f1', '#84cc16']
@@ -158,10 +158,10 @@ export default function DonorDashboard() {
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Top 10 by {t('subscriptions')}<MetricTooltip text={METRIC_TIPS.top10} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Highest subscribed resources</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={topBySubscriptions} layout="vertical">
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={topBySubscriptions} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 0 }}>
               <XAxis type="number" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: '#71717A', fontSize: 10 }} width={120} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fill: '#71717A', fontSize: 10 }} width={140} axisLine={false} tickLine={false} interval={0} />
               <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
               <Bar dataKey="subs" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
@@ -171,9 +171,9 @@ export default function DonorDashboard() {
         <div className="bg-card border border-border p-5">
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('subscriptions')} by {t('type')}<MetricTooltip text={METRIC_TIPS.subsByType} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Distribution of subscriptions across resource types</p>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
-              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} label={renderLabel} labelLine={false} stroke="none">
+              <Pie data={typeDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} stroke="none">
                 {typeDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Legend wrapperStyle={{ fontSize: 10, fontFamily: 'JetBrains Mono', color: '#71717A', textTransform: 'uppercase' }} iconType="square" />
