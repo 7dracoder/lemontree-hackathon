@@ -50,6 +50,16 @@ export async function fetchMarkersWithinBounds(swLng, swLat, neLng, neLat) {
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
 }
+// Fetch ZIP-level demographics and coverage gaps
+export async function fetchZipDemographics(params = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
+  })
+  const res = await fetch(`${BASE}/api/zip-demographics?${qs}`)
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
 // Fetch reviews for a resource — Supabase first, then API, then seeded data
 let _seededReviews = null
 async function getSeededReviews() {

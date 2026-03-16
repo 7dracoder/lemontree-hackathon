@@ -111,6 +111,20 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_zip_demographics',
+      description: 'Get demographic and food coverage data for a specific ZIP code, including SNAP rates, median income, and social vulnerability scores.',
+      parameters: {
+        type: 'object',
+        properties: {
+          zip: { type: 'string', description: 'The 5-digit ZIP code' },
+        },
+        required: ['zip'],
+      },
+    },
+  },
 ]
 
 async function executeTool(name, args) {
@@ -123,7 +137,7 @@ async function executeTool(name, args) {
     if (args.resourceTypeId) params.resourceTypeId = args.resourceTypeId
     const data = await fetchResources(params)
     const resources = data.resources ?? (Array.isArray(data) ? data : [])
-    return resources.map(r => ({
+    const results = resources.map(r => ({
       id: r.id,
       name: r.name,
       city: r.city,
@@ -137,6 +151,12 @@ async function executeTool(name, args) {
       riskScore: computeRiskScore(r),
       barrierIndex: computeBarrierIndex(r),
     }))
+    
+    return {
+      results,
+      totalCount: data.count ?? results.length,
+      note: results.length < (data.count ?? 0) ? `Showing ${results.length} of ${data.count} total matches.` : null
+    }
   }
 
   if (name === 'get_resource_details') {
@@ -156,6 +176,12 @@ async function executeTool(name, args) {
         count: sentiment.count,
       },
     }
+  }
+
+  if (name === 'get_zip_demographics') {
+    const { fetchZipDemographics } = await import('../api/lemontree')
+    const data = await fetchZipDemographics({ zip: args.zip })
+    return data[0] ?? { error: `No demographic data found for ZIP ${args.zip}` }
   }
 
   return { error: `Unknown tool: ${name}` }
@@ -188,7 +214,6 @@ async function runAgent(conversationMessages, view) {
         let result
         try {
           const args = JSON.parse(toolCall.function.arguments)
-          onToolCall?.(toolCall.function.name, args)
           result = await executeTool(toolCall.function.name, args)
         } catch (e) {
           result = { error: e.message }
