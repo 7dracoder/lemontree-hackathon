@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { Activity, Star, AlertTriangle, MessageSquare } from 'lucide-react'
+import { Activity, Star, AlertTriangle, MessageSquare, FileText, Download } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
 import FilterBar from '../components/FilterBar'
@@ -11,6 +11,7 @@ import MapView from '../components/MapView'
 import RiskBadge from '../components/RiskBadge'
 import { isClosedToday } from '../utils/mlScoring'
 import { useExport } from '../context/ExportContext'
+import { getResourcePDFUrl } from '../api/lemontree'
 import ResourceReviews from '../components/ResourceReviews'
 import SentimentPanel from '../components/SentimentPanel'
 import GoogleReviewsPanel from '../components/GoogleReviewsPanel'
@@ -51,6 +52,7 @@ const KPI_CONFIG = [
 export default function FoodBankDashboard() {
   const [filters, setFilters] = useState({})
   const [selectedResource, setSelectedResource] = useState(null)
+  const [flyerCity, setFlyerCity] = useState('')
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
   const { setExportState } = useExport()
@@ -91,6 +93,20 @@ export default function FoodBankDashboard() {
     })
     return Object.entries(m).map(([name, value]) => ({ name, value }))
   }, [data, lang])
+
+  const citiesWithCoords = useMemo(() => {
+    const seen = new Set()
+    const cities = []
+    data.forEach(r => {
+      if (r.latitude && r.longitude && r.city && !seen.has(r.city)) {
+        seen.add(r.city)
+        cities.push({ city: r.city, state: r.state ?? '', lat: r.latitude, lng: r.longitude })
+      }
+    })
+    return cities.sort((a, b) => a.city.localeCompare(b.city))
+  }, [data])
+
+  const flyerTarget = citiesWithCoords.find(c => c.city === flyerCity) ?? null
 
   const avgRating = data.filter(r => r.ratingAverage).length
     ? (data.reduce((s, r) => s + (r.ratingAverage ?? 0), 0) / data.filter(r => r.ratingAverage).length).toFixed(2)
@@ -362,6 +378,42 @@ export default function FoodBankDashboard() {
               <span className="uppercase tracking-widest font-bold">SELECT A RESOURCE</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Community Flyer Download */}
+      <div className="bg-card border border-border p-5">
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center gap-2">
+          <FileText size={14} className="text-accent" /> Community Flyer
+        </h3>
+        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Download a printable resource flyer for a specific city</p>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="text-[10px] tracking-widest uppercase font-bold text-tertiary block mb-2">Select City</label>
+            <select
+              value={flyerCity}
+              onChange={e => setFlyerCity(e.target.value)}
+              className="w-full bg-surface text-primary text-[11px] font-mono p-3 border border-border focus:border-accent outline-none appearance-none rounded-none"
+            >
+              <option value="">— Choose a city —</option>
+              {citiesWithCoords.map(c => (
+                <option key={c.city} value={c.city}>{c.city}{c.state ? `, ${c.state}` : ''}</option>
+              ))}
+            </select>
+          </div>
+          <a
+            href={flyerTarget ? getResourcePDFUrl(flyerTarget.lat, flyerTarget.lng, { locationName: flyerTarget.city, flyerLang: lang }) : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => !flyerTarget && e.preventDefault()}
+            className={`flex items-center gap-2 px-5 py-3 text-[10px] font-bold tracking-widest uppercase border transition-colors whitespace-nowrap ${
+              flyerTarget
+                ? 'border-accent text-accent bg-accent/10 hover:bg-accent hover:text-page'
+                : 'border-border text-tertiary cursor-not-allowed opacity-50'
+            }`}
+          >
+            <Download size={13} /> {t('downloadFlyer')}
+          </a>
         </div>
       </div>
     </div>
