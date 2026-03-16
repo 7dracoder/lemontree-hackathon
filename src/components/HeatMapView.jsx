@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Circle, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { getRiskLabel } from '../utils/mlScoring'
 import { useTranslation } from '../hooks/useTranslation'
@@ -16,8 +16,7 @@ const DEFAULT_ZOOM = 4
 const CACHE_KEY = 'heatmap_rows_v1'
 const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
 
-// FIX 4: defined outside component — never recreated on re-render
-const CANVAS_RENDERER = L.canvas({ padding: 0.5 })
+// Canvas renderer created lazily inside component to avoid Leaflet lifecycle issues
 
 // FIX (bonus): pin icon cache — same color reuses same L.divIcon instance
 const PIN_ICON_CACHE = {}
@@ -236,6 +235,8 @@ export default function HeatMapView({
 }) {
   const [rows, setRows] = useState([])
   const { t, lang } = useTranslation()
+  const rendererRef = useRef(null)
+  if (!rendererRef.current) rendererRef.current = L.canvas({ padding: 0.5 })
 
   const validResources = useMemo(
     () => (resources || []).filter(r => r.latitude && r.longitude),
@@ -293,7 +294,7 @@ export default function HeatMapView({
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
         style={{ height: '100%', width: '100%' }}
-        renderer={CANVAS_RENDERER}   // FIX 4: one canvas element instead of 40k+ SVG DOM nodes
+        renderer={rendererRef.current}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

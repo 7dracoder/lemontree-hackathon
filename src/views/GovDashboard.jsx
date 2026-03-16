@@ -72,7 +72,7 @@ function usePlacementRecommendations(state) {
             const zips = scores.map((r) => r.zip)
             const { data: geo } = await _supabase
               .from('zip_coverage_gap')
-              .select('zip, zip_lat, zip_lon, snap_households, coverage_gap, pantry_count_nearby')
+              .select('zip, zip_lat, zip_lon, coverage_gap, pantry_count_nearby')
               .in('zip', zips)
             const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
             setRecs(scores.map((r) => {
@@ -81,7 +81,6 @@ function usePlacementRecommendations(state) {
                 ...r,
                 zip_lat: g?.zip_lat != null ? Number(g.zip_lat) : null,
                 zip_lon: g?.zip_lon != null ? Number(g.zip_lon) : null,
-                snap_households: g?.snap_households ?? null,
                 coverage_gap: g?.coverage_gap ?? null,
                 pantry_count_nearby: g?.pantry_count_nearby ?? null,
               }
