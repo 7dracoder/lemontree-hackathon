@@ -1,19 +1,25 @@
 import { MapContainer, TileLayer, Circle, Marker, Tooltip, useMap } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
-import L from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { getRiskLabel } from '../utils/mlScoring'
 import { useTranslation } from '../hooks/useTranslation'
 
-// this is publishable key, safe for github
+// publishable key, safe for github
 const supabase = createClient(
   'https://sweceszfqssyzqyzpggc.supabase.co',
   'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
 )
 
+// FIX 4: Canvas renderer defined OUTSIDE component — never recreated on re-render
+const CANVAS_RENDERER = L.canvas({ padding: 0.5 })
+
 const DEFAULT_CENTER = [39.5, -98.35]
 const DEFAULT_ZOOM = 4
+
+// FIX 6: Cache key + TTL for localStorage
+const CACHE_KEY = 'heatmap_rows_v1'
+const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
 
 function makePinIcon(color = '#3b82f6') {
   return L.divIcon({
@@ -37,13 +43,9 @@ function makePinIcon(color = '#3b82f6') {
 
 function FlyToCenter({ center, zoom, shouldFly }) {
   const map = useMap()
-
   useEffect(() => {
-    if (shouldFly) {
-      map.flyTo(center, zoom, { duration: 1.2 })
-    }
+    if (shouldFly) map.flyTo(center, zoom, { duration: 1.2 })
   }, [map, center, zoom, shouldFly])
-
   return null
 }
 
@@ -52,9 +54,7 @@ function normalize(rows, field) {
     .map((r) => r[field])
     .filter((v) => typeof v === 'number' && !Number.isNaN(v))
 
-  if (!vals.length) {
-    return rows.map((r) => ({ ...r, _norm: 0 }))
-  }
+  if (!vals.length) return rows.map((r) => ({ ...r, _norm: 0 }))
 
   const min = Math.min(...vals)
   const max = Math.max(...vals)
@@ -80,8 +80,7 @@ function buildRowsWithScore(rows, mode) {
   }
 
   if (mode === 'pantry_count') {
-    const normalized = normalize(rows, 'pantry_count_nearby')
-    return normalized.map((r) => ({
+    return normalize(rows, 'pantry_count_nearby').map((r) => ({
       ...r,
       _score: r._norm,
       _label: 'Nearby pantry count',
@@ -122,16 +121,12 @@ function buildRowsWithScore(rows, mode) {
   if (mode === 'snap_population_vs_pantry_count') {
     const snapNormRows = normalize(rows, 'snap_households')
     const pantryNormRows = normalize(rows, 'pantry_count_nearby')
-
-    const pantryNormMap = Object.fromEntries(
-      pantryNormRows.map((r) => [r.zip, r._norm ?? 0])
-    )
+    const pantryNormMap = Object.fromEntries(pantryNormRows.map((r) => [r.zip, r._norm ?? 0]))
 
     return snapNormRows.map((r) => {
       const snapNorm = r._norm ?? 0
       const pantryNorm = pantryNormMap[r.zip] ?? 0
       const badness = (snapNorm + (1 - pantryNorm)) / 2
-
       return {
         ...r,
         _score: badness,
@@ -144,36 +139,24 @@ function buildRowsWithScore(rows, mode) {
     })
   }
 
-  const snapHouseholdVals = rows
-    .map((r) => r.snap_households)
-    .filter((v) => typeof v === 'number' && !Number.isNaN(v))
-  const snapHouseholdMin = Math.min(...snapHouseholdVals)
-  const snapHouseholdMax = Math.max(...snapHouseholdVals)
-  const snapHouseholdRange = snapHouseholdMax - snapHouseholdMin || 1
+  // default: snap_households + nearest_pantry_miles risk
+  const snapVals = rows.map((r) => r.snap_households).filter((v) => typeof v === 'number' && !Number.isNaN(v))
+  const snapMin = Math.min(...snapVals)
+  const snapRange = (Math.max(...snapVals) - snapMin) || 1
 
-  const distVals = rows
-    .map((r) => r.nearest_pantry_miles)
-    .filter((v) => typeof v === 'number' && !Number.isNaN(v))
+  const distVals = rows.map((r) => r.nearest_pantry_miles).filter((v) => typeof v === 'number' && !Number.isNaN(v))
   const distMin = Math.min(...distVals)
-  const distMax = Math.max(...distVals)
-  const distRange = distMax - distMin || 1
+  const distRange = (Math.max(...distVals) - distMin) || 1
 
   return rows.map((r) => {
-    const snapPopulationNorm =
-      typeof r.snap_households === 'number' && !Number.isNaN(r.snap_households)
-        ? (r.snap_households - snapHouseholdMin) / snapHouseholdRange
-        : 0
-
-    const distNorm =
-      typeof r.nearest_pantry_miles === 'number' && !Number.isNaN(r.nearest_pantry_miles)
-        ? (r.nearest_pantry_miles - distMin) / distRange
-        : 0
-
-    const badness = (snapPopulationNorm + distNorm) / 2
+    const snapNorm = typeof r.snap_households === 'number' && !Number.isNaN(r.snap_households)
+      ? (r.snap_households - snapMin) / snapRange : 0
+    const distNorm = typeof r.nearest_pantry_miles === 'number' && !Number.isNaN(r.nearest_pantry_miles)
+      ? (r.nearest_pantry_miles - distMin) / distRange : 0
 
     return {
       ...r,
-      _score: badness,
+      _score: (snapNorm + distNorm) / 2,
       _label: 'SNAP households + pantry distance risk',
       _valueText:
         r.snap_households != null && r.nearest_pantry_miles != null
@@ -192,7 +175,6 @@ function getColor(score, mode) {
     if (score >= 0.05) return '#ea580c'
     return '#dc2626'
   }
-
   if (score >= 0.85) return '#7f1d1d'
   if (score >= 0.7) return '#b91c1c'
   if (score >= 0.55) return '#ea580c'
@@ -203,57 +185,105 @@ function getColor(score, mode) {
 
 function isNycZip(zip) {
   const s = String(zip || '')
-  return (
-    s.startsWith('100') ||
-    s.startsWith('101') ||
-    s.startsWith('102') ||
-    s.startsWith('103') ||
-    s.startsWith('104') ||
-    s.startsWith('111') ||
-    s.startsWith('112') ||
-    s.startsWith('113') ||
-    s.startsWith('114') ||
-    s.startsWith('116')
-  )
+  return ['100', '101', '102', '103', '104', '111', '112', '113', '114', '116']
+    .some((p) => s.startsWith(p))
 }
 
 function getDisplayRadius(zip) {
   return isNycZip(zip) ? 1000 : 2000
 }
 
+// FIX 5: Lazy tooltip — only renders content for the currently hovered zip
+function LazyTooltipContent({ r }) {
+  return (
+    <div style={{ fontSize: 11 }}>
+      <strong>ZIP {r.zip}</strong><br />
+      {r._label}: {r._valueText}<br />
+      SNAP rate: {r.snap_rate != null ? `${(r.snap_rate * 100).toFixed(1)}%` : '—'}<br />
+      Poverty rate: {r.poverty_rate != null ? `${(r.poverty_rate * 100).toFixed(1)}%` : '—'}<br />
+      Language barrier: {r.limited_english_pct != null ? `${(r.limited_english_pct * 100).toFixed(1)}%` : '—'}<br />
+      Nearby pantries: {r.pantry_count_nearby ?? '—'}<br />
+      Nearest pantry: {r.nearest_pantry_miles !== 10 ? `${Number(r.nearest_pantry_miles).toFixed(2)} mi` : '—'}
+    </div>
+  )
+}
+
 function SnapLayer({ rows, mode }) {
+  // FIX 3: Both scoring and color computation are memoized
   const scoredRows = useMemo(() => buildRowsWithScore(rows, mode), [rows, mode])
 
-  return scoredRows.map((r) => {
-    const color = getColor(r._score ?? 0, mode)
+  const coloredRows = useMemo(
+    () => scoredRows.map((r) => ({ ...r, _color: getColor(r._score ?? 0, mode) })),
+    [scoredRows, mode]
+  )
 
-    return (
-      <Circle
-        key={`${mode}-${r.zip}`}
-        center={[r.zip_lat, r.zip_lon]}
-        radius={getDisplayRadius(r.zip)}
-        pathOptions={{
-          color,
-          fillColor: color,
-          fillOpacity: 0.4,
-          opacity: 0.7,
-          weight: 1
-        }}
-      >
-        <Tooltip>
-          <div style={{ fontSize: 11 }}>
-            <strong>ZIP {r.zip}</strong><br />
-            {r._label}: {r._valueText}<br />
-            SNAP rate: {r.snap_rate != null ? `${(r.snap_rate * 100).toFixed(1)}%` : '—'}<br />
-            Poverty rate: {r.poverty_rate != null ? `${(r.poverty_rate * 100).toFixed(1)}%` : '—'}<br />
-            Language barrier: {r.limited_english_pct != null ? `${(r.limited_english_pct * 100).toFixed(1)}%` : '—'}<br />
-            Nearby pantries: {r.pantry_count_nearby ?? '—'}<br />
-            Nearest pantry: {r.nearest_pantry_miles !== 10 ? `${Number(r.nearest_pantry_miles).toFixed(2)} mi` : '—'}
-          </div>
+  // FIX 5: Single state tracks which zip is hovered — only that tooltip renders
+  const [hoveredZip, setHoveredZip] = useState(null)
+
+  return coloredRows.map((r) => (
+    <Circle
+      // FIX 2: Stable key — no mode prefix means no remount on mode switch
+      key={r.zip}
+      center={[r.zip_lat, r.zip_lon]}
+      radius={getDisplayRadius(r.zip)}
+      pathOptions={{
+        color: r._color,
+        fillColor: r._color,
+        fillOpacity: 0.4,
+        opacity: 0.7,
+        weight: 1,
+      }}
+      eventHandlers={{
+        mouseover: () => setHoveredZip(r.zip),
+        mouseout: () => setHoveredZip(null),
+      }}
+    >
+      {/* FIX 5: Tooltip subtree only mounts for the hovered circle */}
+      {hoveredZip === r.zip && (
+        <Tooltip permanent>
+          <LazyTooltipContent r={r} />
         </Tooltip>
-      </Circle>
-    )
-  })
+      )}
+    </Circle>
+  ))
+}
+
+// FIX 1: Parallel Supabase fetches — gap and demographics load simultaneously
+async function fetchAllGap() {
+  const pageSize = 1000
+  let from = 0
+  let all = []
+  while (true) {
+    const { data, error } = await supabase
+      .from('zip_coverage_gap')
+      .select('zip, zip_lat, zip_lon, pantry_count_nearby, nearest_pantry_miles')
+      .range(from, from + pageSize - 1)
+    if (error) { console.error('zip_coverage_gap error', error); return [] }
+    const batch = Array.isArray(data) ? data : []
+    all = all.concat(batch)
+    if (batch.length < pageSize) break
+    from += pageSize
+  }
+  return all
+}
+
+async function fetchAllDemo() {
+  // Fetch all demographics — no need to wait for gap zips, enabling true parallelism
+  const pageSize = 1000
+  let from = 0
+  let all = []
+  while (true) {
+    const { data, error } = await supabase
+      .from('zip_demographics')
+      .select('zip, snap_households, total_households, snap_rate, poverty_rate, limited_english_pct')
+      .range(from, from + pageSize - 1)
+    if (error) { console.error('zip_demographics error', error); return [] }
+    const batch = Array.isArray(data) ? data : []
+    all = all.concat(batch)
+    if (batch.length < pageSize) break
+    from += pageSize
+  }
+  return all
 }
 
 export default function HeatMapView({
@@ -266,9 +296,6 @@ export default function HeatMapView({
   const [rows, setRows] = useState([])
   const { t, lang } = useTranslation()
 
-  const center = DEFAULT_CENTER
-  const zoom = DEFAULT_ZOOM
-
   const validResources = useMemo(
     () => (resources || []).filter((r) => r.latitude && r.longitude),
     [resources]
@@ -276,49 +303,20 @@ export default function HeatMapView({
 
   useEffect(() => {
     async function load() {
-      const pageSize = 1000
-      let from = 0
-      let allGap = []
-
-      while (true) {
-        const { data, error } = await supabase
-          .from('zip_coverage_gap')
-          .select('zip, zip_lat, zip_lon, pantry_count_nearby, nearest_pantry_miles')
-          .range(from, from + pageSize - 1)
-
-        if (error) {
-          console.error('zip_coverage_gap error', error)
-          return
+      // FIX 6: Return cached rows immediately if fresh — skips all network calls
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { ts, rows: cachedRows } = JSON.parse(cached)
+          if (Date.now() - ts < CACHE_TTL) {
+            setRows(cachedRows)
+            return
+          }
         }
+      } catch (_) {}
 
-        const batch = Array.isArray(data) ? data : []
-        allGap = allGap.concat(batch)
-
-        if (batch.length < pageSize) break
-        from += pageSize
-      }
-
-      const zips = allGap.map((r) => r.zip).filter(Boolean)
-
-      let allDemo = []
-      let demoFrom = 0
-
-      while (demoFrom < zips.length) {
-        const zipBatch = zips.slice(demoFrom, demoFrom + 1000)
-
-        const { data, error } = await supabase
-          .from('zip_demographics')
-          .select('zip, snap_households, total_households, snap_rate, poverty_rate, limited_english_pct')
-          .in('zip', zipBatch)
-
-        if (error) {
-          console.error('zip_demographics error', error)
-          return
-        }
-
-        allDemo = allDemo.concat(Array.isArray(data) ? data : [])
-        demoFrom += 1000
-      }
+      // FIX 1: Both tables fetch in parallel — not sequentially
+      const [allGap, allDemo] = await Promise.all([fetchAllGap(), fetchAllDemo()])
 
       const demoMap = Object.fromEntries(allDemo.map((d) => [d.zip, d]))
 
@@ -327,46 +325,51 @@ export default function HeatMapView({
           zip: g.zip,
           zip_lat: Number(g.zip_lat),
           zip_lon: Number(g.zip_lon),
-          pantry_count_nearby:
-            g.pantry_count_nearby == null ? null : Number(g.pantry_count_nearby),
-          nearest_pantry_miles:
-            g.nearest_pantry_miles == null ? 10 : Number(g.nearest_pantry_miles),
+          pantry_count_nearby: g.pantry_count_nearby == null ? null : Number(g.pantry_count_nearby),
+          nearest_pantry_miles: g.nearest_pantry_miles == null ? 10 : Number(g.nearest_pantry_miles),
           snap_households: demoMap[g.zip]?.snap_households ?? null,
           total_households: demoMap[g.zip]?.total_households ?? null,
-          snap_rate:
-            demoMap[g.zip]?.snap_rate == null
-              ? null
-              : Number(demoMap[g.zip].snap_rate),
-          poverty_rate:
-            demoMap[g.zip]?.poverty_rate == null
-              ? null
-              : Number(demoMap[g.zip].poverty_rate),
-          limited_english_pct:
-            demoMap[g.zip]?.limited_english_pct == null
-              ? null
-              : Number(demoMap[g.zip].limited_english_pct)
+          snap_rate: demoMap[g.zip]?.snap_rate == null ? null : Number(demoMap[g.zip].snap_rate),
+          poverty_rate: demoMap[g.zip]?.poverty_rate == null ? null : Number(demoMap[g.zip].poverty_rate),
+          limited_english_pct: demoMap[g.zip]?.limited_english_pct == null ? null : Number(demoMap[g.zip].limited_english_pct)
         }))
         .filter((r) => Number.isFinite(r.zip_lat) && Number.isFinite(r.zip_lon))
 
       setRows(merged)
+
+      // FIX 6: Cache merged rows — next visit skips fetching entirely
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), rows: merged }))
+      } catch (_) {}
     }
 
     load()
   }, [])
 
+  // Memoize pin icons per color to avoid recreating L.divIcon on every render
+  const pinIconCache = useRef({})
+  const getPinIcon = useCallback((color) => {
+    if (!pinIconCache.current[color]) {
+      pinIconCache.current[color] = makePinIcon(color)
+    }
+    return pinIconCache.current[color]
+  }, [])
+
   return (
     <div style={{ height }} className="border border-border">
+      {/* FIX 4: renderer={CANVAS_RENDERER} — all circles draw on one canvas element */}
       <MapContainer
-        center={center}
-        zoom={zoom}
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
         style={{ height: '100%', width: '100%' }}
+        renderer={CANVAS_RENDERER}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-        <FlyToCenter center={center} zoom={zoom} shouldFly={false} />
+        <FlyToCenter center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} shouldFly={false} />
 
         <SnapLayer rows={rows} mode={mode} />
 
@@ -376,17 +379,15 @@ export default function HeatMapView({
             const fallbackRisk = getRiskLabel(r.riskScore ?? 0)
             const pinColor = markerStyle?.color ?? fallbackRisk.color ?? '#3b82f6'
             const pinLabel = markerStyle?.label ?? fallbackRisk.label
-            const pinIcon = makePinIcon(pinColor)
+            const pinIcon = getPinIcon(pinColor)
 
-            const typeName =
-              lang === 'es'
-                ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
-                : (r.resourceType?.name ?? '')
+            const typeName = lang === 'es'
+              ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
+              : (r.resourceType?.name ?? '')
 
-            const desc =
-              lang === 'es'
-                ? (r.description_es ?? r.description ?? '')
-                : (r.description ?? '')
+            const desc = lang === 'es'
+              ? (r.description_es ?? r.description ?? '')
+              : (r.description ?? '')
 
             return (
               <Marker
@@ -411,25 +412,25 @@ export default function HeatMapView({
         </MarkerClusterGroup>
 
         {placementRecs.filter((r) => r.zip_lat && r.zip_lon).map((rec, i) => (
-        <Marker
+          <Marker
             key={`rec-${rec.zip}`}
             position={[rec.zip_lat, rec.zip_lon]}
-            icon={makePinIcon('#a855f7')}
-        >
+            icon={getPinIcon('#a855f7')}
+          >
             <Tooltip>
-            <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[220px]">
+              <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[220px]">
                 <strong style={{ color: '#a855f7' }}>
-                #{i + 1} RECOMMENDED · ZIP {rec.zip}
+                  #{i + 1} RECOMMENDED · ZIP {rec.zip}
                 </strong><br />
                 <span>
-                Score: {(rec.placement_score * 100).toFixed(1)} · Gap:{' '}
-                {rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}
+                  Score: {(rec.placement_score * 100).toFixed(1)} · Gap:{' '}
+                  {rec.coverage_gap != null ? `${(rec.coverage_gap * 100).toFixed(0)}%` : '—'}
                 </span><br />
                 <span>{rec.snap_households?.toLocaleString()} SNAP households</span><br />
                 <span style={{ color: '#d1d5db' }}>{rec.explanation}</span>
-            </div>
+              </div>
             </Tooltip>
-        </Marker>
+          </Marker>
         ))}
       </MapContainer>
     </div>
