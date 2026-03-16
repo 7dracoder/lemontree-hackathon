@@ -32,6 +32,7 @@ const KPI_CONFIG = [
 
 export default function GovDashboard() {
   const [filters, setFilters] = useState({})
+  const [heatMode, setHeatMode] = useState('snap_rate')
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
@@ -278,7 +279,7 @@ export default function GovDashboard() {
               }`}
             >
               Distance to Pantry
-            </button>git
+            </button>
 
             <button
               onClick={() => setHeatMode('snap_vs_distance')}
@@ -302,6 +303,7 @@ export default function GovDashboard() {
               SNAP Pop + Pantry Count
             </button>
           </div>
+      </div>
       </div>
 
 
