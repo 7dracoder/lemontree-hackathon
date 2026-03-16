@@ -22,6 +22,7 @@ const TOP_N = 5
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Content-Type', 'application/json')
+  res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'OPTIONS') {
     res.status(200).end()
@@ -34,7 +35,8 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
     )
 
-    const state = req.query?.state?.toUpperCase() || null
+    const urlState = req.query?.state || new URL(req.url, 'http://localhost').searchParams.get('state')
+    const state = urlState?.toUpperCase() || null
 
     let data, error
     if (state) {
