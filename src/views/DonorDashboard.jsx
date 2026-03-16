@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { Users, Star, MessageSquare, TrendingUp } from 'lucide-react'
 import { useFilteredResources } from '../hooks/useResources'
@@ -79,20 +79,14 @@ export default function DonorDashboard() {
   }, [data, lang])
 
   const ratingBuckets = useMemo(() => {
-    const out = [
-      { range: '1–2⭐', count: 0 },
-      { range: '2–3⭐', count: 0 },
-      { range: '3–4⭐', count: 0 },
-      { range: '4–5⭐', count: 0 },
-    ]
+    const bins = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
     data.forEach(r => {
-      const v = r.ratingAverage ?? 0
-      if (v < 2) out[0].count++
-      else if (v < 3) out[1].count++
-      else if (v < 4) out[2].count++
-      else out[3].count++
+      if (r.ratingAverage) {
+        const k = String(Math.round(r.ratingAverage))
+        if (bins[k] !== undefined) bins[k]++
+      }
     })
-    return out
+    return Object.entries(bins).map(([k, v]) => ({ stars: '★'.repeat(Number(k)), count: v }))
   }, [data])
 
   const avgRating = data.filter(r => r.ratingAverage).length
@@ -175,53 +169,54 @@ export default function DonorDashboard() {
       </div>
 
       <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Rating Distribution (Resources)<MetricTooltip text={METRIC_TIPS.ratingDist} /></h3>
-        <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources grouped by rating range</p>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={ratingBuckets}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="range" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
-            <Bar dataKey="count" fill="#22c55e" radius={[0, 0, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-4 uppercase tracking-wide">🗺️ {t('mapTitle')}</h3>
         <MapView resources={data} height="360px" />
       </div>
 
-      {/* Resource Table */}
-      <div className="bg-card border border-border overflow-hidden">
-        <div className="p-5 border-b border-border">
-          <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Resource Impact Table</h3>
-        </div>
-        <div className="overflow-auto max-h-72">
-          <table className="w-full text-xs">
-            <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
-              <tr>
-                {[t('name'), t('city'), t('type'), t('subscriptions'), t('totalReviews'), t('ratingAverage')].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {[...data].sort((a, b) => (b._count?.resourceSubscriptions ?? 0) - (a._count?.resourceSubscriptions ?? 0)).slice(0, 100).map(r => (
-                <tr key={r.id} className="hover:bg-surface transition-colors">
-                  <td className="px-4 py-3 text-primary truncate max-w-[180px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}, {r.state ?? ''}</td>
-                  <td className="px-4 py-3 text-tertiary tracking-wide text-[10px] uppercase">
-                    {lang === 'es' ? (r.resourceType?.name_es ?? r.resourceType?.name) : r.resourceType?.name}
-                  </td>
-                  <td className="px-4 py-3 text-green-400 font-semibold">{r._count?.resourceSubscriptions ?? 0}</td>
-                  <td className="px-4 py-3 text-blue-400">{r._count?.reviews ?? 0}</td>
-                  <td className="px-4 py-3 text-accent font-bold">{r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : '—'}</td>
+      {/* Resource Table + Rating Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-card border border-border overflow-hidden">
+          <div className="p-5 border-b border-border">
+            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">Resource Impact Table</h3>
+          </div>
+          <div className="overflow-auto max-h-72">
+            <table className="w-full text-xs">
+              <thead className="bg-card sticky top-0 z-10 shadow-sm border-b border-border">
+                <tr>
+                  {[t('name'), t('city'), t('type'), t('subscriptions'), t('totalReviews'), t('ratingAverage')].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] text-secondary font-bold uppercase tracking-widest">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[...data].sort((a, b) => (b._count?.resourceSubscriptions ?? 0) - (a._count?.resourceSubscriptions ?? 0)).slice(0, 100).map(r => (
+                  <tr key={r.id} className="hover:bg-surface transition-colors">
+                    <td className="px-4 py-3 text-primary truncate max-w-[180px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}, {r.state ?? ''}</td>
+                    <td className="px-4 py-3 text-tertiary tracking-wide text-[10px] uppercase">
+                      {lang === 'es' ? (r.resourceType?.name_es ?? r.resourceType?.name) : r.resourceType?.name}
+                    </td>
+                    <td className="px-4 py-3 text-green-400 font-semibold">{r._count?.resourceSubscriptions ?? 0}</td>
+                    <td className="px-4 py-3 text-blue-400">{r._count?.reviews ?? 0}</td>
+                    <td className="px-4 py-3 text-accent font-bold">{r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border p-5">
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Rating Distribution<MetricTooltip text={METRIC_TIPS.ratingDist} /></h3>
+          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Count of resources by rating</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={ratingBuckets}>
+              <XAxis dataKey="stars" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Bar dataKey="count" fill="#facc15" radius={[0, 0, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
