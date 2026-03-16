@@ -35,6 +35,7 @@ function findNearestNeighbors(resource, allResources, n = 5) {
 const CLOSE_THRESHOLD_MI = 3
 const MIN_RATING_GOOD = 2.0
 const MIN_RESOURCES = 1
+const MAX_DIST_MI = 50
 
 function qualityScore(r) {
   let score = 0
@@ -95,7 +96,11 @@ export function computeTravelBurden(resources) {
     if (!nearestAny) return
 
     const distToNearest = nearestAny.dist
-    const distToNearestGood = nearestGood?.dist ?? null
+    if (distToNearest > MAX_DIST_MI) return   // nearest pantry too far — skip ZIP
+
+    const rawDistGood = nearestGood?.dist ?? null
+    const goodCapped = rawDistGood == null || rawDistGood > MAX_DIST_MI
+    const distToNearestGood = goodCapped ? MAX_DIST_MI : rawDistGood
 
     const ratedLocals = zipResources.filter(r => r.ratingAverage != null)
     const avgLocalRating = ratedLocals.length > 0
@@ -103,10 +108,7 @@ export function computeTravelBurden(resources) {
       : null
     const avgLocalQuality = zipResources.reduce((s, r) => s + qualityScore(r), 0) / zipResources.length
 
-    const burdenScore =
-      distToNearestGood != null && distToNearest > 0
-        ? parseFloat((distToNearestGood / Math.max(distToNearest, 0.1)).toFixed(2))
-        : null
+    const burdenScore = parseFloat((distToNearestGood / Math.max(distToNearest, 0.1)).toFixed(2))
 
     const hasNearbyButLowQuality = distToNearest <= CLOSE_THRESHOLD_MI && avgLocalQuality < 30
     const localClosed = zipResources.filter(r => (r.occurrences ?? []).length > 0 && r.occurrences.every(o => o.skippedAt)).length
@@ -118,16 +120,16 @@ export function computeTravelBurden(resources) {
       avgLocalRating,
       avgLocalQuality: parseFloat(avgLocalQuality.toFixed(1)),
       distToNearest: parseFloat(distToNearest.toFixed(2)),
-      distToNearestGood: distToNearestGood != null ? parseFloat(distToNearestGood.toFixed(2)) : null,
-      nearestGoodName: nearestGood?.name ?? null,
-      nearestGoodCity: nearestGood?.city ?? null,
+      distToNearestGood: parseFloat(distToNearestGood.toFixed(2)),
+      goodCapped,
+      nearestGoodName: goodCapped ? null : (nearestGood?.name ?? null),
+      nearestGoodCity: goodCapped ? null : (nearestGood?.city ?? null),
       burdenScore,
       hasNearbyButLowQuality,
       localClosed,
       localAppointment,
       severity:
-        burdenScore == null ? 'unknown'
-        : burdenScore >= 3  ? 'high'
+        burdenScore >= 3  ? 'high'
         : burdenScore >= 1.5 ? 'medium'
         : 'low',
     })
