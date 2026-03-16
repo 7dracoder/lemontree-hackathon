@@ -30,7 +30,13 @@ export function useResources() {
         skip += take
       }
 
-      return all
+      // Deduplicate by id in case the API returns overlapping pages
+      const seen = new Set()
+      return all.filter(r => {
+        if (seen.has(r.id)) return false
+        seen.add(r.id)
+        return true
+      })
     },
     staleTime: Infinity,
     retry: 2,

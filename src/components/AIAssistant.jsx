@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { MessageSquare, X, Send, Sparkles } from 'lucide-react'
 import OpenAI from 'openai'
 import { fetchResources, fetchResourceById, fetchResourceReviews } from '../api/lemontree'
@@ -10,20 +11,51 @@ const client = new OpenAI({
   dangerouslyAllowBrowser: true,
 })
 
-const SYSTEM_PROMPT = `You are a food access analyst in the Lemontree Insights Dashboard, used by food banks, donors, and government agencies to understand US food assistance resources.
+const BASE_PROMPT = `You are a food access analyst in the Lemontree Insights Dashboard.
 
-Three dashboard views: Food Bank (operational quality, satisfaction, wait times), Donor (household reach, resource coverage, donor impact), Government (supply-demand gaps, food deserts, high-barrier regions).
+Always use a tool before answering resource-specific questions. Three tools:
+1) search_resources 
+2) get_resource_details
+3) get_resource_reviews
 
-Three tools: search_resources supports lat/lng for geographic queries and text for name/org searches. get_resource_details fetches a specific resource by ID. get_resource_reviews fetches visitor reviews and sentiment. Always use a tool before answering resource-specific questions.
+Consider the quantitative scores:  
+1) Risk Score (0–100): <30 low, 30–59 medium, ≥60 high
+2) Barrier Index (0–1): >0.6 high-barrier
+3) Food Desert Clusters: Well Served → Moderate Access → Strained Resources → Food Desert. 
+4) VADER Sentiment (−1 to 1): >0.5 positive, <−0.5 negative.
 
-ML scores per resource: Risk Score (0–100): <30 low, 30–59 medium, ≥60 high. Barrier Index (0–1): >0.6 high-barrier. Food Desert Clusters: Well Served → Moderate Access → Strained Resources → Food Desert. VADER Sentiment (−1 to 1): >0.5 positive, <−0.5 negative.
+When referencing data from tool results, cite the relevant field names so the user can verify.
+Do not use markdown or em dashes. Speak in typical prose.`
 
-When referencing data from tool results, cite the relevant field names so the user can verify. 
-Give actionable recommendations where possible. 
+const VIEW_PROMPTS = {
+  foodbank: `You are assisting a food bank operator.
 
-Do not use markdown ibolding (**) for emphasis or headers. Provide all text in plain, unformatted format.
+  Focus on operational quality:
+  visitor satisfaction, wait times, staffing capacity, review sentiment, and risk scores
 
-`;
+  Highlight issues that affect day-to-day service delivery and suggest concrete improvements
+  a pantry manager could act on.`,
+
+  donor: `You are assisting a donor or funding organization. 
+  
+  Focus on impact metrics: 
+  household reach, resource coverage gaps, which pantries serve the most people, 
+  and where additional funding would have the greatest effect. 
+
+  Frame findings in terms of donor ROI and community outcomes.`,
+
+  government: `You are assisting a government or policy analyst. 
+
+  Focus on systemic gaps: 
+  food deserts, high-barrier regions, supply-demand mismatches, and underserved ZIP codes. 
+  
+  Highlight structural issues that require policy intervention or resource reallocation.`,
+}
+
+function getSystemPrompt(view) {
+  const viewContext = VIEW_PROMPTS[view] ?? `You are viewing the Lemontree Insights Dashboard. Answer questions about food assistance resources across all perspectives.`
+  return `${BASE_PROMPT}\n\n${viewContext}`
+}
 
 const TOOLS = [
   {
@@ -122,9 +154,9 @@ async function executeTool(name, args) {
   return { error: `Unknown tool: ${name}` }
 }
 
-async function runAgent(conversationMessages, onToolCall) {
+async function runAgent(conversationMessages, view) {
   const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: getSystemPrompt(view) },
     ...conversationMessages.slice(-10),
   ]
 
@@ -170,6 +202,8 @@ async function runAgent(conversationMessages, onToolCall) {
 }
 
 export default function AIAssistant() {
+  const [params] = useSearchParams()
+  const view = params.get('view')
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([
     { role: 'assistant', content: "Hi! I'm your Lemontree data assistant. Ask me about food resources in any city, a specific pantry's details, or what visitors have said about a location." },
@@ -190,9 +224,7 @@ export default function AIAssistant() {
     setLoading(true)
     try {
       const agentMessages = [...messages, userMsg].filter(m => m.role !== 'tool')
-      const content = await runAgent(agentMessages, (toolName, args) => {
-        setMessages(prev => [...prev, { role: 'tool', content: `${toolName}(${JSON.stringify(args)})` }])
-      })
+      const content = await runAgent(agentMessages, view)
       setMessages(prev => [...prev, { role: 'assistant', content }])
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}. Check your VITE_OPENAI_API_KEY in .env` }])
