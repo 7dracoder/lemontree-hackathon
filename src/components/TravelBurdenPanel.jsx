@@ -125,23 +125,18 @@ export default function TravelBurdenPanel({ resources }) {
       </div>
 
       {/* Definitions */}
-      <div className="bg-card border border-border p-5">
-        <p className="text-[10px] font-bold tracking-widest uppercase text-tertiary mb-3">// Definitions</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-2">
-          {[
-            { term: 'Burden Score', def: 'Ratio of distance to nearest good pantry ÷ distance to nearest any pantry. Score of 3× means the nearest quality option is 3× farther away.' },
-            { term: 'High Burden', def: 'Burden score ≥ 3 or nearest good pantry > 10 mi. Residents face meaningful extra travel to reach a quality resource.' },
-            { term: 'Good Pantry', def: 'A resource with an average rating ≥ 3.5 stars, indicating reliable quality based on community reviews.' },
-          ].map(({ term, def }) => (
-            <div key={term} className="flex gap-2">
-              <span className="text-accent font-bold font-mono text-[10px] uppercase tracking-widest shrink-0 mt-0.5">›</span>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">{term}: </span>
-                <span className="text-[10px] font-mono text-secondary leading-relaxed">{def}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="bg-card border border-border px-5 py-3 flex flex-wrap gap-x-6 gap-y-1.5 items-baseline">
+        <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary shrink-0">// Defs</span>
+        {[
+          { term: 'Burden Score', def: 'dist-to-good ÷ dist-to-nearest. Higher = more extra travel needed.' },
+          { term: 'High Burden', def: 'Score ≥ 3×.' },
+          { term: 'Good Pantry', def: 'Rating ≥ 3.5★, walk-in, above-median quality.' },
+          { term: '50mi Cap', def: 'No good pantry found within 50 mi — capped at 50 for scoring.' },
+        ].map(({ term, def }) => (
+          <span key={term} className="text-[10px] font-mono text-secondary">
+            <span className="text-primary font-bold uppercase tracking-wide">{term}:</span> {def}
+          </span>
+        ))}
       </div>
 
       {/* Summary KPIs */}
