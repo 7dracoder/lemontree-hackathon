@@ -229,7 +229,7 @@ export default function GovDashboard() {
 
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-          Food Desert {t('cluster')} Distribution
+          Food Access Coverage Zones
         </h3>
         <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
           {'// '}Resources clustered by location, rating, and access barriers
