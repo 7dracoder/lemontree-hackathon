@@ -30,8 +30,8 @@ export default async function handler(req, res) {
 
   try {
     const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
+      process.env.SUPABASE_URL || 'https://sweceszfqssyzqyzpggc.supabase.co',
+      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
     )
 
     const state = req.query?.state?.toUpperCase() || null
