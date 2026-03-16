@@ -1,4 +1,5 @@
-const BASE = import.meta.env.PROD ? 'https://platform.foodhelpline.org' : '';
+const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const BASE = isLocalhost ? '' : 'https://platform.foodhelpline.org';
 // Parse superjson wire format — use raw.json directly (Option B from the API guide)
 function parse(raw) {
   return raw.json ?? raw
