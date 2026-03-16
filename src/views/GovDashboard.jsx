@@ -53,6 +53,19 @@ const LEMONTREE_STATES = [
   { value: 'TX', label: 'Texas' },
 ]
 
+function generateExplanation(rec) {
+  if (rec.explanation) return rec.explanation
+  const parts = []
+  if (rec.coverage_gap != null) {
+    const pct = (rec.coverage_gap * 100).toFixed(0)
+    parts.push(rec.coverage_gap >= 0.9 ? `${pct}% coverage gap — essentially no pantry access` : `${pct}% coverage gap`)
+  }
+  if (rec.pantry_count_nearby === 0) parts.push('no pantries within service radius')
+  else if (rec.pantry_count_nearby != null) parts.push(`${rec.pantry_count_nearby} nearby pantry${rec.pantry_count_nearby !== 1 ? 's' : ''}`)
+  if (rec.snap_households != null) parts.push(`${rec.snap_households.toLocaleString()} SNAP households`)
+  return parts.length ? parts.join(' · ') : 'High-need zip code identified by placement model'
+}
+
 function usePlacementRecommendations(state) {
   const [recs, setRecs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -70,19 +83,22 @@ function usePlacementRecommendations(state) {
             .limit(5)
           if (scores?.length) {
             const zips = scores.map((r) => r.zip)
-            const { data: geo } = await _supabase
-              .from('zip_coverage_gap')
-              .select('zip, zip_lat, zip_lon, coverage_gap, pantry_count_nearby')
-              .in('zip', zips)
+            const [{ data: geo }, { data: demo }] = await Promise.all([
+              _supabase.from('zip_coverage_gap').select('zip, zip_lat, zip_lon, coverage_gap, pantry_count_nearby').in('zip', zips),
+              _supabase.from('zip_demographics').select('zip, snap_households').in('zip', zips),
+            ])
             const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
+            const demoMap = Object.fromEntries((demo || []).map((d) => [d.zip, d]))
             setRecs(scores.map((r) => {
               const g = geoMap[r.zip]
+              const d = demoMap[r.zip]
               return {
                 ...r,
                 zip_lat: g?.zip_lat != null ? Number(g.zip_lat) : null,
                 zip_lon: g?.zip_lon != null ? Number(g.zip_lon) : null,
                 coverage_gap: g?.coverage_gap ?? null,
                 pantry_count_nearby: g?.pantry_count_nearby ?? null,
+                snap_households: d?.snap_households ?? null,
               }
             }))
             setLoading(false)
@@ -552,7 +568,7 @@ export default function GovDashboard() {
                           <div className="font-bold text-secondary">{rec.pantry_count_nearby ?? 0}</div>
                         </div>
                       </div>
-                      <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{rec.explanation}</div>
+                      <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{generateExplanation(rec)}</div>
                     </div>
                   ))}
                 </div>
