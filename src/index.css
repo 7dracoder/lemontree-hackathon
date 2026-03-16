@@ -206,6 +206,12 @@ input:focus, select:focus, textarea:focus, button:focus {
   border-radius: 0 !important;
   box-shadow: none !important;
   font-family: 'JetBrains Mono', monospace;
+  color: var(--color-primary) !important;
+}
+
+.recharts-default-tooltip .recharts-tooltip-item,
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: var(--color-primary) !important;
 }
 
 /* ── Chat Typing Dots ──────────────────────────────── */

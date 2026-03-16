@@ -181,7 +181,10 @@ export default function FoodBankDashboard() {
             <BarChart data={ratingDist}>
               <XAxis dataKey="stars" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Tooltip 
+                contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
+                itemStyle={{ color: 'var(--color-primary)' }}
+              />
               <Bar dataKey="count" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

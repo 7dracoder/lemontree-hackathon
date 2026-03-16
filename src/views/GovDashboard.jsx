@@ -437,7 +437,10 @@ export default function GovDashboard() {
                 <BarChart data={barrierByState}>
                   <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 1]} tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+                  <Tooltip 
+                    contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
+                    itemStyle={{ color: 'var(--color-primary)' }}
+                  />
                   <Bar dataKey="barrier" radius={[0, 0, 0, 0]}>
                     {barrierByState.map((entry, i) => (
                       <Cell key={i} fill={entry.barrier > 0.6 ? '#ef4444' : entry.barrier > 0.3 ? '#f59e0b' : '#22c55e'} />
@@ -459,7 +462,10 @@ export default function GovDashboard() {
                 <BarChart data={lowConfidenceByState}>
                   <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+                  <Tooltip 
+                    contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
+                    itemStyle={{ color: 'var(--color-primary)' }}
+                  />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

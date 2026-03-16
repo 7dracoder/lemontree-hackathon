@@ -162,7 +162,10 @@ export default function DonorDashboard() {
             <BarChart data={topBySubscriptions} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 0 }}>
               <XAxis type="number" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fill: '#71717A', fontSize: 10 }} width={140} axisLine={false} tickLine={false} interval={0} />
-              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Tooltip 
+                contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
+                itemStyle={{ color: 'var(--color-primary)' }}
+              />
               <Bar dataKey="subs" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -256,7 +259,10 @@ export default function DonorDashboard() {
             <BarChart data={ratingBuckets}>
               <XAxis dataKey="stars" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
+              <Tooltip 
+                contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
+                itemStyle={{ color: 'var(--color-primary)' }}
+              />
               <Bar dataKey="count" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

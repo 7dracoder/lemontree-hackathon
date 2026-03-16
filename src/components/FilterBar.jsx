@@ -1,12 +1,67 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
-import { X, SlidersHorizontal } from 'lucide-react'
+import { X, SlidersHorizontal, ChevronDown } from 'lucide-react'
 
 const RESOURCE_TYPES = [
   { id: 'all', en: 'All Types', es: 'Todos los Tipos' },
   { id: 'FOOD_PANTRY', en: 'Food Pantry', es: 'Despensa de Alimentos' },
   { id: 'SOUP_KITCHEN', en: 'Soup Kitchen', es: 'Comedor' },
 ]
+
+function SearchableDropdown({ value, onChange, options, placeholder, className = "" }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState(value || '')
+
+  useEffect(() => {
+    setSearch(value || '')
+  }, [value])
+
+  const filtered = useMemo(() => {
+    if (!search) return options
+    const s = search.toLowerCase()
+    return options.filter(o => o.toLowerCase().includes(s))
+  }, [options, search])
+
+  return (
+    <div className={`relative ${className}`}>
+      <div className="relative group">
+        <input
+          type="text"
+          value={search}
+          onChange={e => {
+            setSearch(e.target.value)
+            onChange(e.target.value)
+            setIsOpen(true)
+          }}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+          placeholder={placeholder}
+          className="w-full bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 pr-8 border border-border focus:border-accent outline-none transition-all cursor-text placeholder:text-tertiary"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-tertiary group-focus-within:text-accent transition-colors">
+          <ChevronDown size={14} />
+        </div>
+      </div>
+      {isOpen && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-[1000] mt-1 max-h-60 overflow-auto bg-page border border-accent shadow-2xl">
+          {filtered.map(opt => (
+            <div
+              key={opt}
+              onClick={() => {
+                setSearch(opt)
+                onChange(opt)
+                setIsOpen(false)
+              }}
+              className="px-3 py-2.5 text-xs tracking-wide uppercase text-secondary hover:text-primary hover:bg-accent/10 cursor-pointer border-b border-border/50 last:border-0"
+            >
+              {opt.length > 40 ? opt.substring(0, 40) + '...' : opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function FilterBar({ filters, onChange, allData = [] }) {
   const { t, lang } = useTranslation()
@@ -62,28 +117,22 @@ export default function FilterBar({ filters, onChange, allData = [] }) {
   const hasActive = Object.entries(filters).some(([k, v]) => v && v !== 'all')
 
   return (
-    <div className="bg-card border border-border flex flex-wrap gap-3 items-center p-4 animate-fade-in shadow-xl shadow-black/50">
-      <select
+    <div className="relative z-[50] bg-card border border-border flex flex-wrap gap-3 items-center p-4 animate-fade-in shadow-xl shadow-black/50">
+      <SearchableDropdown
         value={local.text}
-        onChange={e => set('text', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer max-w-[200px]"
-      >
-        <option value="" className="bg-page text-primary">{t('searchByName')}</option>
-        {nameSuggestions.map(n => (
-          <option key={n} value={n} className="bg-page text-primary">{n.length > 30 ? n.substring(0, 30) + '...' : n}</option>
-        ))}
-      </select>
+        onChange={val => set('text', val)}
+        options={nameSuggestions}
+        placeholder={t('searchByName')}
+        className="min-w-[200px]"
+      />
 
-      <select
+      <SearchableDropdown
         value={local.zipCode}
-        onChange={e => set('zipCode', e.target.value)}
-        className="bg-page text-primary text-xs tracking-wide uppercase px-3 py-2 border border-border focus:border-accent outline-none transition-all cursor-pointer"
-      >
-        <option value="" className="bg-page text-primary">{t('searchByZip')}</option>
-        {zipSuggestions.map(z => (
-          <option key={z} value={z} className="bg-page text-primary">{z}</option>
-        ))}
-      </select>
+        onChange={val => set('zipCode', val)}
+        options={zipSuggestions}
+        placeholder={t('searchByZip')}
+        className="w-32"
+      />
 
       <select
         value={local.resourceType}
