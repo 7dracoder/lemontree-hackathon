@@ -15,13 +15,13 @@ export function useResources() {
       const MAX = 2000
 
       const firstPage = await fetchResources({ take, skip })
-      const total = Math.min(firstPage.count ?? 0, MAX)
       const firstResources = firstPage.resources ?? []
+      const total = Math.min(firstPage.count ?? 0, MAX)
       all = [...all, ...firstResources]
       setProgress(Math.min(100, Math.round((all.length / Math.max(total, 1)) * 100)))
       skip += take
 
-      while (all.length < total) {
+      while (all.length < MAX && all.length < (firstPage.count ?? Infinity)) {
         const data = await fetchResources({ take, skip })
         const resources = data.resources ?? []
         if (resources.length === 0) break
