@@ -367,45 +367,49 @@ export default function HeatMapView({
 
         <FlyToCenter center={center} zoom={zoom} shouldFly={false} />
 
+import MarkerClusterGroup from 'react-leaflet-cluster'
+
         <SnapLayer rows={rows} mode={mode} />
 
-        {validResources.map((r) => {
-          const markerStyle = clusterMap?.[r.id]
-          const fallbackRisk = getRiskLabel(r.riskScore ?? 0)
-          const pinColor = markerStyle?.color ?? fallbackRisk.color ?? '#3b82f6'
-          const pinLabel = markerStyle?.label ?? fallbackRisk.label
-          const pinIcon = makePinIcon(pinColor)
+        <MarkerClusterGroup chunkedLoading>
+          {validResources.map((r) => {
+            const markerStyle = clusterMap?.[r.id]
+            const fallbackRisk = getRiskLabel(r.riskScore ?? 0)
+            const pinColor = markerStyle?.color ?? fallbackRisk.color ?? '#3b82f6'
+            const pinLabel = markerStyle?.label ?? fallbackRisk.label
+            const pinIcon = makePinIcon(pinColor)
 
-          const typeName =
-            lang === 'es'
-              ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
-              : (r.resourceType?.name ?? '')
+            const typeName =
+              lang === 'es'
+                ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
+                : (r.resourceType?.name ?? '')
 
-          const desc =
-            lang === 'es'
-              ? (r.description_es ?? r.description ?? '')
-              : (r.description ?? '')
+            const desc =
+              lang === 'es'
+                ? (r.description_es ?? r.description ?? '')
+                : (r.description ?? '')
 
-          return (
-            <Marker
-              key={`resource-${r.id}`}
-              position={[r.latitude, r.longitude]}
-              icon={pinIcon}
-            >
-              <Tooltip>
-                <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
-                  <strong className="text-accent">{r.name ?? 'Unknown'}</strong><br />
-                  <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
-                  {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
-                  {r._count?.reviews ? ` (${r._count.reviews} ${t('reviews').toLowerCase()})` : ''}<br />
-                  <span style={{ color: pinColor }}>📍 {pinLabel}</span>
-                  {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
-                  {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
-                </div>
-              </Tooltip>
-            </Marker>
-          )
-        })}
+            return (
+              <Marker
+                key={`resource-${r.id}`}
+                position={[r.latitude, r.longitude]}
+                icon={pinIcon}
+              >
+                <Tooltip>
+                  <div className="font-mono text-[10px] tracking-wide uppercase leading-relaxed max-w-[200px] text-primary">
+                    <strong className="text-accent">{r.name ?? 'Unknown'}</strong><br />
+                    <span className="text-secondary">{typeName} · {r.city}, {r.state}</span><br />
+                    {r.ratingAverage ? `⭐ ${r.ratingAverage.toFixed(1)}` : ''}
+                    {r._count?.reviews ? ` (${r._count.reviews} ${t('reviews').toLowerCase()})` : ''}<br />
+                    <span style={{ color: pinColor }}>📍 {pinLabel}</span>
+                    {desc ? <span><br />{desc.slice(0, 80)}…</span> : ''}
+                    {r.openByAppointment ? <span className="text-status-info"><br />📅 {t('openByAppointment')}</span> : ''}
+                  </div>
+                </Tooltip>
+              </Marker>
+            )
+          })}
+        </MarkerClusterGroup>
 
         {placementRecs.filter((r) => r.zip_lat && r.zip_lon).map((rec, i) => (
         <Marker
