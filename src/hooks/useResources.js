@@ -15,12 +15,17 @@ export function useResources(apiParams = {}) {
     retry: 2,
   })
 
-  const enriched = useMemo(
-    () => raw
-      .filter(r => !r.mergedToResourceId)
-      .map(r => ({ ...r, riskScore: computeRiskScore(r) })),
-    [raw]
-  )
+  const enriched = useMemo(() => {
+    const seen = new Set()
+    return raw
+      .filter(r => {
+        if (r.mergedToResourceId) return false
+        if (seen.has(r.id)) return false
+        seen.add(r.id)
+        return true
+      })
+      .map(r => ({ ...r, riskScore: computeRiskScore(r) }))
+  }, [raw])
 
   return { data: enriched, isLoading, error, progress }
 }
