@@ -1,4 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const _supabase = createClient(
+  'https://sweceszfqssyzqyzpggc.supabase.co',
+  'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
+)
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { MapPin, Shield, AlertTriangle, Eye, TrendingUp, Loader2 } from 'lucide-react'
 import { useResources } from '../hooks/useResources'
@@ -54,9 +60,28 @@ function usePlacementRecommendations(state) {
   useEffect(() => {
     setLoading(true)
     async function load() {
-      const url = state
-        ? `/api/placement-recommendations?state=${state}`
-        : '/api/placement-recommendations'
+      if (state) {
+        try {
+          const { data: scores } = await _supabase
+            .from('zip_placement_scores')
+            .select('zip, placement_score, state')
+            .eq('state', state)
+            .order('placement_score', { ascending: false })
+            .limit(5)
+          if (scores?.length) {
+            const zips = scores.map((r) => r.zip)
+            const { data: geo } = await _supabase
+              .from('zip_coverage_gap')
+              .select('zip, zip_lat, zip_lon')
+              .in('zip', zips)
+            const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
+            setRecs(scores.map((r) => ({ ...r, zip_lat: geoMap[r.zip]?.zip_lat ?? null, zip_lon: geoMap[r.zip]?.zip_lon ?? null })))
+            setLoading(false)
+            return
+          }
+        } catch (_) {}
+      }
+      const url = '/api/placement-recommendations'
       try {
         const res = await fetch(url)
         if (res.ok) {
