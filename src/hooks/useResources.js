@@ -10,7 +10,7 @@ export function useResources(apiParams = {}) {
     queryKey: ['resources', JSON.stringify(apiParams)],
     queryFn: () => fetchAllResources(apiParams, (loaded, total) => {
       setProgress(Math.round((loaded / Math.max(total, 1)) * 100))
-    }),
+    }, 100),
     staleTime: 1000 * 60 * 10,
     retry: 2,
   })

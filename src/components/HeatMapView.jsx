@@ -232,7 +232,7 @@ export default function HeatMapView({
   clusterMap = {},
   placementRecs = [],
   height = '400px',
-  mode = 'snap_rate'
+  mode = 'snap_rate',
 }) {
   const [rows, setRows] = useState([])
   const { t, lang } = useTranslation()
@@ -338,7 +338,7 @@ export default function HeatMapView({
           })}
         </MarkerClusterGroup>
 
-        {placementRecs.filter(r => r.zip_lat && r.zip_lon).map((rec, i) => (
+        {placementRecs.filter((r) => Number.isFinite(r.zip_lat) && Number.isFinite(r.zip_lon)).map((rec, i) => (
           <Marker
             key={`rec-${rec.zip}`}
             position={[rec.zip_lat, rec.zip_lon]}

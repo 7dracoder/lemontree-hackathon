@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     if (state) {
       ;({ data, error } = await supabase
         .from('zip_placement_scores')
-        .select('zip, placement_score, state')
+        .select('zip, placement_score, state, explanation, model_r2')
         .eq('state', state)
         .order('placement_score', { ascending: false })
         .limit(TOP_N))
@@ -50,10 +50,20 @@ export default async function handler(req, res) {
         const zips = data.map((r) => r.zip)
         const { data: geo } = await supabase
           .from('zip_coverage_gap')
-          .select('zip, zip_lat, zip_lon')
+          .select('zip, zip_lat, zip_lon, snap_households, coverage_gap, pantry_count_nearby')
           .in('zip', zips)
         const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
-        data = data.map((r) => ({ ...r, zip_lat: geoMap[r.zip]?.zip_lat ?? null, zip_lon: geoMap[r.zip]?.zip_lon ?? null }))
+        data = data.map((r) => {
+          const g = geoMap[r.zip]
+          return {
+            ...r,
+            zip_lat: g?.zip_lat ?? null,
+            zip_lon: g?.zip_lon ?? null,
+            snap_households: g?.snap_households ?? null,
+            coverage_gap: g?.coverage_gap ?? null,
+            pantry_count_nearby: g?.pantry_count_nearby ?? null,
+          }
+        })
       }
     } else {
       ;({ data, error } = await supabase
@@ -64,11 +74,22 @@ export default async function handler(req, res) {
     }
 
     if (error) throw error
+
+    // When state is specified but no rows: return empty (don't fall back to national)
+    if (state && (!data || data.length === 0)) {
+      res.status(200).json([])
+      return
+    }
+
     if (!data || data.length === 0) throw new Error('No rows returned from Supabase')
 
     res.status(200).json(data)
   } catch (err) {
-    // Fallback to local JSON
+    // Fallback to local JSON only when no state filter (national view)
+    if (state) {
+      res.status(200).json([])
+      return
+    }
     try {
       const raw = fs.readFileSync(FALLBACK_PATH, 'utf-8')
       const fallback = JSON.parse(raw)

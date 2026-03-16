@@ -224,7 +224,8 @@ function isNyOrNjZip(zip) {
 }
 
 function isNyOrNjResource(resource) {
-  return resource?.state === 'NY' || resource?.state === 'NJ'
+  const s = resource?.state
+  return s === 'NY' || s === 'NJ' || s === 'New York' || s === 'New Jersey'
 }
 
 function SnapLayer({ rows, mode }) {

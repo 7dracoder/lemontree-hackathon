@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/ai",
@@ -21,7 +23,7 @@
       "destination": "https://maps.googleapis.com/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|.*\\.).*)",
       "destination": "/index.html"
     }
   ]
