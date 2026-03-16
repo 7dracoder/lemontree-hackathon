@@ -5,7 +5,7 @@
       "destination": "https://platform.foodhelpline.org/api/resources/:path*"
     },
     {
-      "source": "/((?!assets/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
