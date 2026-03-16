@@ -252,6 +252,7 @@ def score_and_recommend(df, weights, scaler, top_n=TOP_N):
 
     df = df[df["snap_households"] >= 100]
 
+    all_scored = df[["zip", "placement_score"]].copy()
     top = df.nlargest(top_n, "placement_score").reset_index(drop=True)
 
     # Percentile thresholds for explanation generation
@@ -293,12 +294,45 @@ def score_and_recommend(df, weights, scaler, top_n=TOP_N):
             "feature_weights": weights,
         })
 
-    return recommendations
+    return recommendations, all_scored
 
 
-def save_results(recommendations, model_r2, supabase):
+def zip_to_state(zip_str):
+    """Derive 2-letter state abbreviation from zip code using numeric ranges."""
+    try:
+        z = int(zip_str)
+    except (ValueError, TypeError):
+        return None
+    ranges = [
+        (601, 988, 'PR'), (1001, 2791, 'MA'), (2801, 2940, 'RI'),
+        (3031, 3897, 'NH'), (3901, 4992, 'ME'), (5001, 5907, 'VT'),
+        (6001, 6928, 'CT'), (7001, 8989, 'NJ'), (10001, 14975, 'NY'),
+        (15001, 19640, 'PA'), (19701, 19980, 'DE'), (20001, 20599, 'DC'),
+        (20601, 21930, 'MD'), (22001, 24658, 'VA'), (24701, 26886, 'WV'),
+        (27006, 28909, 'NC'), (29001, 29948, 'SC'), (30001, 31999, 'GA'),
+        (32004, 34997, 'FL'), (35004, 36925, 'AL'), (37010, 38589, 'TN'),
+        (38601, 39776, 'MS'), (40003, 42788, 'KY'), (43001, 45999, 'OH'),
+        (46001, 47997, 'IN'), (48001, 49971, 'MI'), (50001, 52809, 'IA'),
+        (53001, 54990, 'WI'), (55001, 56763, 'MN'), (57001, 57799, 'SD'),
+        (58001, 58856, 'ND'), (59001, 59937, 'MT'), (60001, 62999, 'IL'),
+        (63001, 65899, 'MO'), (66002, 67954, 'KS'), (68001, 69367, 'NE'),
+        (70001, 71497, 'LA'), (71601, 72959, 'AR'), (73001, 74966, 'OK'),
+        (75001, 79999, 'TX'), (80001, 81658, 'CO'), (82001, 83128, 'WY'),
+        (83201, 83876, 'ID'), (84001, 84784, 'UT'), (85001, 86556, 'AZ'),
+        (87001, 88441, 'NM'), (88901, 89883, 'NV'), (90001, 96162, 'CA'),
+        (96701, 96898, 'HI'), (97001, 97920, 'OR'), (98001, 99403, 'WA'),
+        (99501, 99950, 'AK'),
+    ]
+    for lo, hi, state in ranges:
+        if lo <= z <= hi:
+            return state
+    return None
+
+
+def save_results(recommendations, model_r2, supabase, all_scored_df=None):
     """
     Save results to Supabase pantry_placement_recommendations and local JSON fallback.
+    Also saves all scored zips to zip_placement_scores for state-level filtering.
     """
     records = [
         {**rec, "model_r2": round(float(model_r2), 6)}
@@ -313,6 +347,26 @@ def save_results(recommendations, model_r2, supabase):
         print(f"  Upserted {len(supabase_records)} recommendations to Supabase")
     except Exception as e:
         print(f"  ERROR writing to Supabase: {e}")
+
+    # Bulk upsert all scored zips to zip_placement_scores for state filtering
+    if all_scored_df is not None:
+        score_rows = [
+            {
+                "zip": str(row["zip"]),
+                "placement_score": round(float(row["placement_score"]), 6),
+                "state": zip_to_state(str(row["zip"]))
+            }
+            for _, row in all_scored_df.iterrows()
+        ]
+        batch_size = 1000
+        saved = 0
+        for i in range(0, len(score_rows), batch_size):
+            try:
+                supabase.table("zip_placement_scores").upsert(score_rows[i:i+batch_size]).execute()
+                saved += len(score_rows[i:i+batch_size])
+            except Exception as e:
+                print(f"  ERROR writing zip_placement_scores batch {i}: {e}")
+        print(f"  Upserted {saved} zip scores to zip_placement_scores")
 
     # Local JSON fallback
     outputs_dir = os.path.join(os.path.dirname(__file__), "outputs")
@@ -342,10 +396,10 @@ if __name__ == "__main__":
     weights = extract_shap_weights(model, X_scaled)
 
     print("\nScoring all zip codes and generating recommendations...")
-    recommendations = score_and_recommend(df, weights, scaler)
+    recommendations, all_scored = score_and_recommend(df, weights, scaler)
 
     print("\nSaving results...")
-    save_results(recommendations, model_r2, supabase)
+    save_results(recommendations, model_r2, supabase, all_scored_df=all_scored)
 
     print(f"\n=== TOP {TOP_N} PLACEMENT RECOMMENDATIONS ===")
     for i, rec in enumerate(recommendations, 1):

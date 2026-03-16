@@ -2,10 +2,11 @@
  * GET /api/placement-recommendations
  *
  * Returns top pantry placement recommendations ordered by placement_score desc.
- * Reads from Supabase pantry_placement_recommendations table.
+ * Reads from Supabase pantry_placement_recommendations table (global top 5).
+ * If ?state=NY provided, queries zip_placement_scores filtered by state instead.
  * Falls back to data/outputs/placement_recs.json if Supabase is unavailable.
  *
- * Query params: none
+ * Query params: state (optional, 2-letter abbreviation e.g. "NY")
  * Response: JSON array of recommendation objects
  */
 
@@ -33,11 +34,32 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_KEY
     )
 
-    const { data, error } = await supabase
-      .from('pantry_placement_recommendations')
-      .select('*')
-      .order('placement_score', { ascending: false })
-      .limit(TOP_N)
+    const state = req.query?.state?.toUpperCase() || null
+
+    let data, error
+    if (state) {
+      ;({ data, error } = await supabase
+        .from('zip_placement_scores')
+        .select('zip, placement_score, state')
+        .eq('state', state)
+        .order('placement_score', { ascending: false })
+        .limit(TOP_N))
+      if (!error && data?.length) {
+        const zips = data.map((r) => r.zip)
+        const { data: geo } = await supabase
+          .from('zip_coverage_gap')
+          .select('zip, zip_lat, zip_lon')
+          .in('zip', zips)
+        const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
+        data = data.map((r) => ({ ...r, zip_lat: geoMap[r.zip]?.zip_lat ?? null, zip_lon: geoMap[r.zip]?.zip_lon ?? null }))
+      }
+    } else {
+      ;({ data, error } = await supabase
+        .from('pantry_placement_recommendations')
+        .select('*')
+        .order('placement_score', { ascending: false })
+        .limit(TOP_N))
+    }
 
     if (error) throw error
     if (!data || data.length === 0) throw new Error('No rows returned from Supabase')
