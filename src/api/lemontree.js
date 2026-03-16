@@ -1,4 +1,4 @@
-const BASE = ''
+const BASE = import.meta.env.PROD ? 'https://platform.foodhelpline.org' : '';
 // Parse superjson wire format — use raw.json directly (Option B from the API guide)
 function parse(raw) {
   return raw.json ?? raw
