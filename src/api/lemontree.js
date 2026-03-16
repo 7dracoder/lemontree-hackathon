@@ -15,21 +15,31 @@ export async function fetchResources(params = {}) {
   return parse(await res.json())
 }
 // Multi-page fetch with cursor pagination — loads all resources up to limit
-export async function fetchAllResources(params = {}, onProgress, limit = 500) {
+export async function fetchAllResources(params = {}, onProgress, limit = 15000) {
   let all = []
-  let cursor
-  let total = null
+  let skip = 0
   const take = 100
+  let total = null
 
-  do {
-    const data = await fetchResources({ take, ...params, ...(cursor ? { cursor } : {}) })
+  while (true) {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
+    })
+    qs.set('take', String(take))
+    qs.set('skip', String(skip))
+
+    const res = await fetch(`${BASE}/api/resources?${qs}`)
+    if (!res.ok) throw new Error(`API ${res.status}`)
+    const data = parse(await res.json())
     const resources = data.resources ?? []
     if (total === null) total = data.count ?? 0
     all = [...all, ...resources]
     if (onProgress) onProgress(all.length, total)
-    cursor = data.cursor
+    if (resources.length < take) break
     if (all.length >= Math.min(total, limit)) break
-  } while (cursor)
+    skip += take
+  }
 
   return all
 }
