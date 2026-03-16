@@ -358,7 +358,7 @@ export default function GovDashboard() {
               }`}
             >
               Distance to Pantry
-            </button>
+            </button>git
 
             <button
               onClick={() => setHeatMode('snap_vs_distance')}
