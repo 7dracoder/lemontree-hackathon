@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -10,7 +10,7 @@ import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import RiskBadge from '../components/RiskBadge'
 import { isClosedToday } from '../utils/mlScoring'
-import ExportButton from '../components/ExportButton'
+import { useExport } from '../context/ExportContext'
 import ResourceReviews from '../components/ResourceReviews'
 import SentimentPanel from '../components/SentimentPanel'
 import GoogleReviewsPanel from '../components/GoogleReviewsPanel'
@@ -53,12 +53,11 @@ export default function FoodBankDashboard() {
   const [selectedResource, setSelectedResource] = useState(null)
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
+  const { setExportState } = useExport()
 
-  const flyerCoords = useMemo(() => {
-    const r = data.find(x => x.latitude && x.longitude)
-    if (!r) return null
-    return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Food Resources' }
-  }, [data])
+  useEffect(() => {
+    setExportState({ data, dashboardId: 'foodbank-dashboard' })
+  }, [data, setExportState])
 
   const ratingDist = useMemo(() => {
     const bins = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
@@ -98,10 +97,10 @@ export default function FoodBankDashboard() {
     : '—'
 
   const kpis = [
-    { label: 'Total Resources', value: data.length, tip: METRIC_TIPS.totalResources, ...KPI_CONFIG[0] },
+    { label: t('totalResources'), value: data.length, tip: METRIC_TIPS.totalResources, ...KPI_CONFIG[0] },
     { label: t('ratingAverage'), value: avgRating, tip: METRIC_TIPS.ratingAvg, ...KPI_CONFIG[1] },
     { label: t('totalReviews'), value: data.reduce((s, r) => s + (r._count?.reviews ?? 0), 0).toLocaleString(), tip: METRIC_TIPS.totalReviews, ...KPI_CONFIG[2] },
-    { label: 'High Risk', value: data.filter(r => (r.riskScore ?? 0) >= 60).length, tip: METRIC_TIPS.highRisk, ...KPI_CONFIG[3] },
+    { label: t('highRisk'), value: data.filter(r => (r.riskScore ?? 0) >= 60).length, tip: METRIC_TIPS.highRisk, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) return (
@@ -122,7 +121,6 @@ export default function FoodBankDashboard() {
           </h1>
           <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('foodbankHeadline')}</p>
         </div>
-        <ExportButton data={data} dashboardId="foodbank-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />

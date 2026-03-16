@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, CartesianGrid,
@@ -8,7 +8,7 @@ import { useFilteredResources } from '../hooks/useResources'
 import { useTranslation } from '../hooks/useTranslation'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
-import ExportButton from '../components/ExportButton'
+import { useExport } from '../context/ExportContext'
 import MetricTooltip from '../components/MetricTooltip'
 
 const METRIC_TIPS = {
@@ -47,12 +47,11 @@ export default function DonorDashboard() {
   const [filters, setFilters] = useState({})
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
+  const { setExportState } = useExport()
 
-  const flyerCoords = useMemo(() => {
-    const r = data.find(x => x.latitude && x.longitude)
-    if (!r) return null
-    return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Food Resources' }
-  }, [data])
+  useEffect(() => {
+    setExportState({ data, dashboardId: 'donor-dashboard' })
+  }, [data, setExportState])
 
   const totalSubs = useMemo(() =>
     data.reduce((s, r) => s + (r._count?.resourceSubscriptions ?? 0), 0), [data])
@@ -101,7 +100,7 @@ export default function DonorDashboard() {
     : '—'
 
   const kpis = [
-    { label: 'Resources', value: data.length.toLocaleString(), tip: METRIC_TIPS.resources, ...KPI_CONFIG[0] },
+    { label: t('totalResources'), value: data.length.toLocaleString(), tip: METRIC_TIPS.resources, ...KPI_CONFIG[0] },
     { label: t('subscriptions'), value: totalSubs.toLocaleString(), tip: METRIC_TIPS.subscriptions, ...KPI_CONFIG[1] },
     { label: t('totalReviews'), value: totalReviews.toLocaleString(), tip: METRIC_TIPS.totalReviews, ...KPI_CONFIG[2] },
     { label: t('ratingAverage'), value: avgRating, tip: METRIC_TIPS.avgRating, ...KPI_CONFIG[3] },
@@ -125,7 +124,6 @@ export default function DonorDashboard() {
           </h1>
           <p className="text-secondary text-xs tracking-wide uppercase mt-2">{'// '}{t('donorHeadline')}</p>
         </div>
-        <ExportButton data={data} dashboardId="donor-dashboard" showFlyer flyerCoords={flyerCoords} />
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} allData={all} />

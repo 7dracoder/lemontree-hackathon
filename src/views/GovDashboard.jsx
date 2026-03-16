@@ -14,8 +14,8 @@ import MapView from '../components/MapView'
 import HeatMapView from '../components/HeatMapView'
 import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
 import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
-import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
+import { useExport } from '../context/ExportContext'
 import MetricTooltip from '../components/MetricTooltip'
 
 const STATE_ABBR = {
@@ -114,6 +114,7 @@ export default function GovDashboard() {
   const { data, isLoading, progress } = useResources({})
   const { recs, loading: recsLoading } = usePlacementRecommendations(recState)
   const { t, lang } = useTranslation()
+  const { setExportState } = useExport()
 
   // Web Worker for K-Means clustering — keeps UI responsive
   const [clusterMap, setClusterMap] = useState({})
@@ -166,6 +167,10 @@ export default function GovDashboard() {
     return () => { w?.terminate(); workerRef.current = null }
   }, [])
 
+  useEffect(() => {
+    setExportState({ data: displayData, dashboardId: 'gov-dashboard' })
+  }, [displayData, setExportState])
+
   const barrierMap = useMemo(() => {
     const result = {}
     data.forEach((r) => {
@@ -181,12 +186,6 @@ export default function GovDashboard() {
     { color: '#ef4444', label: 'Severely Limited Access' },
     { color: '#a855f7', label: 'ML Recommended Placement' },
   ]
-
-  const flyerCoords = useMemo(() => {
-    const r = displayData.find((x) => x.latitude && x.longitude)
-    if (!r) return null
-    return { lat: r.latitude, lng: r.longitude, locationName: r.city ?? 'Region' }
-  }, [displayData])
 
   const clusterDist = useMemo(() => {
     const counts = [0, 0, 0, 0]
@@ -236,16 +235,16 @@ export default function GovDashboard() {
   }, [displayData])
 
   const kpis = [
-    { label: 'Total Resources', value: displayData.length.toLocaleString(), tip: 'Total number of food assistance resources currently loaded and displayed.', ...KPI_CONFIG[0] },
+    { label: t('totalResources'), value: displayData.length.toLocaleString(), tip: 'Total number of food assistance resources currently loaded and displayed.', ...KPI_CONFIG[0] },
     {
-      label: 'Food Deserts',
+      label: t('foodDeserts'),
       value: clusterDist[3]?.count ?? 0,
       href: '#nyc-pantry-service-zones',
       tip: 'Resources in the highest-need cluster — areas with low access, high barriers, and poor ratings.',
       ...KPI_CONFIG[1],
     },
-    { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, tip: 'Percentage of resources where all occurrences are skipped or the location is closed today.', ...KPI_CONFIG[2] },
-    { label: 'Low Confidence', value: displayData.filter((r) => (r.confidence ?? 1) < 0.5).length, tip: 'Resources with a data confidence score below 50% — information may be outdated or unverified.', ...KPI_CONFIG[3] },
+    { label: t('atCapacity'), value: `${capacityData[0]?.pct ?? 0}%`, tip: 'Percentage of resources where all occurrences are skipped or the location is closed today.', ...KPI_CONFIG[2] },
+    { label: t('lowConfidence'), value: displayData.filter((r) => (r.confidence ?? 1) < 0.5).length, tip: 'Resources with a data confidence score below 50% — information may be outdated or unverified.', ...KPI_CONFIG[3] },
   ]
 
   function LegendPin({ color }) {
@@ -306,7 +305,6 @@ export default function GovDashboard() {
               {t('govHeadline')}
             </p>
           </div>
-          <ExportButton data={displayData} dashboardId="gov-dashboard" showFlyer flyerCoords={flyerCoords} />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

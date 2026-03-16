@@ -223,3 +223,36 @@ input:focus, select:focus, textarea:focus, button:focus {
 }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Print / PDF export ────────────────────────────── */
+@media print {
+  /* Force light-mode variables regardless of current theme */
+  :root {
+    --color-page:      #F4F4F5 !important;
+    --color-card:      #FFFFFF !important;
+    --color-surface:   #E4E4E7 !important;
+    --color-primary:   #18181B !important;
+    --color-secondary: #71717A !important;
+    --color-tertiary:  #A1A1AA !important;
+    --color-accent:    #CA8A04 !important;
+    --color-accent-15: rgba(202,138,4,0.15) !important;
+    --color-accent-10: rgba(202,138,4,0.10) !important;
+    --color-accent-30: rgba(202,138,4,0.30) !important;
+    --color-border:    #D4D4D8 !important;
+  }
+
+  /* Preserve colors when printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: #F4F4F5 !important;
+  }
+
+  /* Avoid splits inside cards and charts */
+  .bg-card, .chart-card, .recharts-wrapper {
+    break-inside: avoid;
+  }
+}

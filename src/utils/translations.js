@@ -89,6 +89,11 @@ export const translations = {
     supplyGap: 'Pantries at Capacity',
     openByAppointment: 'By Appointment',
     usageLimit: 'Usage Limit',
+    totalResources: 'Total Resources',
+    foodDeserts: 'Food Deserts',
+    atCapacity: 'At Capacity',
+    lowConfidence: 'Low Confidence',
+    highRisk: 'High Risk',
   },
 
   es: {
@@ -168,6 +173,11 @@ export const translations = {
     supplyGap: 'Brecha de Suministro',
     openByAppointment: 'Con Cita',
     usageLimit: 'Límite de Uso',
+    totalResources: 'Total de Recursos',
+    foodDeserts: 'Desiertos Alimentarios',
+    atCapacity: 'En Capacidad',
+    lowConfidence: 'Baja Confianza',
+    highRisk: 'Alto Riesgo',
   },
 
   fr: {
@@ -247,6 +257,11 @@ export const translations = {
     supplyGap: "Écart d'Approvisionnement",
     openByAppointment: 'Sur Rendez-vous',
     usageLimit: "Limite d'Utilisation",
+    totalResources: 'Total des Ressources',
+    foodDeserts: 'Déserts Alimentaires',
+    atCapacity: 'À Pleine Capacité',
+    lowConfidence: 'Faible Confiance',
+    highRisk: 'Risque Élevé',
   },
 
   hi: {
@@ -326,6 +341,11 @@ export const translations = {
     supplyGap: 'आपूर्ति अंतराल',
     openByAppointment: 'अपॉइंटमेंट से',
     usageLimit: 'उपयोग सीमा',
+    totalResources: 'कुल संसाधन',
+    foodDeserts: 'खाद्य रेगिस्तान',
+    atCapacity: 'पूर्ण क्षमता पर',
+    lowConfidence: 'कम विश्वसनीयता',
+    highRisk: 'उच्च जोखिम',
   },
 
   zh: {
@@ -405,6 +425,11 @@ export const translations = {
     supplyGap: '供应缺口',
     openByAppointment: '需预约',
     usageLimit: '使用限制',
+    totalResources: '资源总数',
+    foodDeserts: '食物荒漠',
+    atCapacity: '满负荷',
+    lowConfidence: '低可信度',
+    highRisk: '高风险',
   },
 
   ar: {
@@ -484,6 +509,11 @@ export const translations = {
     supplyGap: 'فجوة الإمداد',
     openByAppointment: 'بموعد',
     usageLimit: 'حد الاستخدام',
+    totalResources: 'إجمالي الموارد',
+    foodDeserts: 'صحاري غذائية',
+    atCapacity: 'عند الطاقة الكاملة',
+    lowConfidence: 'ثقة منخفضة',
+    highRisk: 'مخاطر عالية',
   },
 
   pt: {
@@ -563,6 +593,11 @@ export const translations = {
     supplyGap: 'Lacuna de Suprimento',
     openByAppointment: 'Com Agendamento',
     usageLimit: 'Limite de Uso',
+    totalResources: 'Total de Recursos',
+    foodDeserts: 'Desertos Alimentares',
+    atCapacity: 'Na Capacidade',
+    lowConfidence: 'Baixa Confiança',
+    highRisk: 'Alto Risco',
   },
 
   ru: {
@@ -642,6 +677,11 @@ export const translations = {
     supplyGap: 'Дефицит Поставок',
     openByAppointment: 'По Записи',
     usageLimit: 'Лимит Использования',
+    totalResources: 'Всего Ресурсов',
+    foodDeserts: 'Продовольственные Пустыни',
+    atCapacity: 'На Пределе Мощности',
+    lowConfidence: 'Низкая Достоверность',
+    highRisk: 'Высокий Риск',
   },
 
   ja: {
@@ -721,6 +761,11 @@ export const translations = {
     supplyGap: '供給ギャップ',
     openByAppointment: '要予約',
     usageLimit: '利用制限',
+    totalResources: '総リソース数',
+    foodDeserts: 'フードデザート地帯',
+    atCapacity: '満杯',
+    lowConfidence: '低信頼度',
+    highRisk: '高リスク',
   },
 
   ko: {
@@ -800,5 +845,10 @@ export const translations = {
     supplyGap: '공급 격차',
     openByAppointment: '예약 필요',
     usageLimit: '사용 제한',
+    totalResources: '총 자원',
+    foodDeserts: '식량 사막 지역',
+    atCapacity: '최대 수용',
+    lowConfidence: '낮은 신뢰도',
+    highRisk: '고위험',
   },
 }
