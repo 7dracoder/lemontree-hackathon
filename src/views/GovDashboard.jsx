@@ -1,10 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
-
-const _supabase = createClient(
-  'https://sweceszfqssyzqyzpggc.supabase.co',
-  'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
-)
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { MapPin, Shield, AlertTriangle, Eye, TrendingUp, Loader2 } from 'lucide-react'
 import { useResources } from '../hooks/useResources'
@@ -17,6 +12,11 @@ import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
 import { useExport } from '../context/ExportContext'
 import MetricTooltip from '../components/MetricTooltip'
+
+const _supabase = createClient(
+  'https://sweceszfqssyzqyzpggc.supabase.co',
+  'sb_publishable_CQV7UAc_2uHNKSNq6kVvVw_4GmAxF0c'
+)
 
 const STATE_ABBR = {
   'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
