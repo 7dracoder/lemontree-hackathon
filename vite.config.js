@@ -18,4 +18,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          maps: ['leaflet', 'react-leaflet'],
+          charts: ['recharts'],
+          icons: ['lucide-react']
+        }
+      }
+    }
+  }
 })
