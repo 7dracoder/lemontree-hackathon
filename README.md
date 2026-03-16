@@ -1,4 +1,4 @@
-# 🍋 Lemontree Insights
+# 🍋 Lemontree Pantryhub
 
 ### *Empowering Food Security through Data Intelligence*
 
