@@ -9,6 +9,17 @@ import { useTranslation } from '../hooks/useTranslation'
 import FilterBar from '../components/FilterBar'
 import MapView from '../components/MapView'
 import ExportButton from '../components/ExportButton'
+import MetricTooltip from '../components/MetricTooltip'
+
+const METRIC_TIPS = {
+  resources: 'Total number of food resources matching your current filters.',
+  subscriptions: 'Total user subscriptions across all resources — indicates community engagement.',
+  totalReviews: 'Sum of all user-submitted reviews across every listed resource.',
+  avgRating: 'Average user rating (1–5 stars) across resources with at least one review.',
+  top10: 'The 10 resources with the highest subscription counts (excludes zero-subscription resources).',
+  subsByType: 'How total subscriptions are distributed across resource categories.',
+  ratingDist: 'Resources grouped into four rating buckets to show overall quality distribution.',
+}
 
 const COLORS = ['#facc15', '#22c55e', '#3b82f6', '#8b5cf6', '#f97316', '#ec4899', '#14b8a6', '#ef4444', '#6366f1', '#84cc16']
 
@@ -90,10 +101,10 @@ export default function DonorDashboard() {
     : '—'
 
   const kpis = [
-    { label: 'Resources', value: data.length.toLocaleString(), ...KPI_CONFIG[0] },
-    { label: t('subscriptions'), value: totalSubs.toLocaleString(), ...KPI_CONFIG[1] },
-    { label: t('totalReviews'), value: totalReviews.toLocaleString(), ...KPI_CONFIG[2] },
-    { label: `Avg ${t('ratingAverage')}`, value: avgRating, ...KPI_CONFIG[3] },
+    { label: 'Resources', value: data.length.toLocaleString(), tip: METRIC_TIPS.resources, ...KPI_CONFIG[0] },
+    { label: t('subscriptions'), value: totalSubs.toLocaleString(), tip: METRIC_TIPS.subscriptions, ...KPI_CONFIG[1] },
+    { label: t('totalReviews'), value: totalReviews.toLocaleString(), tip: METRIC_TIPS.totalReviews, ...KPI_CONFIG[2] },
+    { label: `Avg ${t('ratingAverage')}`, value: avgRating, tip: METRIC_TIPS.avgRating, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) return (
@@ -131,7 +142,7 @@ export default function DonorDashboard() {
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">{kpi.label}</div>
+              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
             </div>
           )
         })}
@@ -140,7 +151,7 @@ export default function DonorDashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Top 10 by {t('subscriptions')}</h3>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Top 10 by {t('subscriptions')}<MetricTooltip text={METRIC_TIPS.top10} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Highest subscribed resources</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={topBySubscriptions} layout="vertical">
@@ -153,7 +164,7 @@ export default function DonorDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">{t('subscriptions')} by {t('type')}</h3>
+          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('subscriptions')} by {t('type')}<MetricTooltip text={METRIC_TIPS.subsByType} /></h3>
           <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Distribution of subscriptions across resource types</p>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -167,7 +178,7 @@ export default function DonorDashboard() {
       </div>
 
       <div className="bg-card border border-border p-5">
-        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">Rating Distribution (Resources)</h3>
+        <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">Rating Distribution (Resources)<MetricTooltip text={METRIC_TIPS.ratingDist} /></h3>
         <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Resources grouped by rating range</p>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={ratingBuckets}>

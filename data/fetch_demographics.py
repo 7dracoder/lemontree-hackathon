@@ -110,17 +110,16 @@ def load_svi_data():
         print(f"  WARNING: {svi_path} not found — social_vulnerability_score will be null")
         return pd.DataFrame(columns=["zip", "social_vulnerability_score"])
 
-    df = pd.read_csv(svi_path, encoding="latin-1", dtype={"ZCTA5": str}, low_memory=False)
+    df = pd.read_csv(svi_path, encoding="latin-1", dtype={"FIPS": str}, low_memory=False)
 
     df["RPL_THEMES"] = pd.to_numeric(df["RPL_THEMES"], errors="coerce")
     df["RPL_THEMES"] = df["RPL_THEMES"].replace(-999, np.nan)
 
-    # Multiple census tracts per zip — take mean
-    df = df.groupby("ZCTA5", as_index=False)["RPL_THEMES"].mean()
-    df = df.rename(columns={"ZCTA5": "zip", "RPL_THEMES": "social_vulnerability_score"})
+    # Extract zip from LOCATION column (e.g. "ZCTA5 01001" -> "01001")
+    df["zip"] = df["LOCATION"].str.replace("ZCTA5 ", "", regex=False).str.strip().str.zfill(5)
 
-    # Zero-pad to 5 chars
-    df["zip"] = df["zip"].str.zfill(5)
+    df = df.groupby("zip", as_index=False)["RPL_THEMES"].mean()
+    df = df.rename(columns={"RPL_THEMES": "social_vulnerability_score"})
     return df[["zip", "social_vulnerability_score"]]
 
 
