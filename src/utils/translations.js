@@ -84,7 +84,7 @@ export const translations = {
     cluster: 'Zone',
     wellServed: 'Well Covered',
     moderateAccess: 'Adequate',
-    strained: 'High Need',
+    strained: 'Moderate Need',
     foodDesert: 'High Need',
     supplyGap: 'Pantries at Capacity',
     openByAppointment: 'By Appointment',

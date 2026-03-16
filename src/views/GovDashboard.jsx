@@ -89,7 +89,7 @@ export default function GovDashboard() {
     { color: '#3b82f6', label: 'Moderately Accessible' },
     { color: '#f59e0b', label: 'Limited Access' },
     { color: '#ef4444', label: 'Severely Limited Access' },
-    { color: '#a855f7', label: 'Recommended Placement' },
+    { color: '#a855f7', label: 'ML Recommended Placement' },
   ]
 
   const flyerCoords = useMemo(() => {
@@ -247,7 +247,7 @@ export default function GovDashboard() {
 
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
-          Food Desert {t('cluster')} Distribution
+          Food Access Coverage Zones
         </h3>
         <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
           {'// '}Resources clustered by location, rating, and access barriers
