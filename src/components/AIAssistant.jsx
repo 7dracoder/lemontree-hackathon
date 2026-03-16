@@ -1,15 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MessageSquare, X, Send, Sparkles } from 'lucide-react'
-import OpenAI from 'openai'
 import { fetchResources, fetchResourceById, fetchResourceReviews } from '../api/lemontree'
 import { analyzeReviews } from '../utils/sentiment'
 import { computeRiskScore, computeBarrierIndex } from '../utils/mlScoring'
 
-const client = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY ?? '',
-  dangerouslyAllowBrowser: true,
-})
+async function chatCompletion({ messages, model = 'gpt-4o-mini', max_tokens = 500, tools, tool_choice }) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, max_tokens, tools, tool_choice }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? res.statusText ?? 'AI request failed')
+  }
+  return res.json()
+}
 
 const BASE_PROMPT = `You are a food access analyst in the Lemontree Insights Dashboard.
 
@@ -161,12 +168,12 @@ async function runAgent(conversationMessages, view) {
   ]
 
   for (let i = 0; i < 5; i++) {
-    const response = await client.chat.completions.create({
+    const response = await chatCompletion({
+      messages,
       model: 'gpt-4o-mini',
       max_tokens: 500,
       tools: TOOLS,
       tool_choice: 'auto',
-      messages,
     })
 
     const choice = response.choices[0]
@@ -227,7 +234,7 @@ export default function AIAssistant() {
       const content = await runAgent(agentMessages, view)
       setMessages(prev => [...prev, { role: 'assistant', content }])
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}. Check your VITE_OPENAI_API_KEY in .env` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}. The AI service may be misconfigured.` }])
     } finally {
       setLoading(false)
     }

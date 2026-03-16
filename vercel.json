@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/ai",
+      "destination": "/api/ai"
+    },
+    {
       "source": "/maps/:path*",
       "destination": "https://maps.googleapis.com/:path*"
     },

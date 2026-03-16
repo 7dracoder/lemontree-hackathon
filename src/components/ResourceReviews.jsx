@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Star, Clock, CheckCircle, XCircle, Camera, ChevronDown } from 'lucide-react'
+import { Star, Clock, CheckCircle, XCircle, Camera } from 'lucide-react'
 import { useTranslation } from '../hooks/useTranslation'
+import { supabase } from '../utils/supabase'
 
 const DID_NOT_ATTEND_REASONS = [
   'Location was closed',
@@ -84,12 +85,34 @@ function ReviewCard({ review }) {
 
 const MIN_REVIEW_CHARS = 10
 
+const SUPABASE_TABLE = 'resource_reviews'
+
+function rowToReview(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    deletedAt: row.deleted_at ?? null,
+    rating: row.rating ?? 0,
+    attended: row.attended ?? null,
+    didNotAttendReason: row.did_not_attend_reason ?? null,
+    waitTimeMinutes: row.wait_time_minutes ?? null,
+    text: row.review_text ?? row.text ?? null,
+    informationAccurate: row.information_accurate ?? null,
+    shareTextWithResource: row.share_text_with_resource ?? false,
+    photoUrl: row.photo_url ?? null,
+    photoPublic: row.photo_public ?? null,
+  }
+}
+
 export default function ResourceReviews({ resource }) {
   const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [persistedReviews, setPersistedReviews] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const [submittedName, setSubmittedName] = useState('')
-  const [localReviews, setLocalReviews] = useState([])
   const [form, setForm] = useState({
     rating: 0,
     attended: null,
@@ -100,44 +123,67 @@ export default function ResourceReviews({ resource }) {
     shareTextWithResource: false,
   })
 
+  const resourceId = resource?.id ?? null
   // Reset review state when the selected resource changes
   useEffect(() => {
     setSubmitted(false)
     setSubmittedName('')
     setShowForm(false)
-    setLocalReviews([])
+    setSubmitError(null)
     setForm({ rating: 0, attended: null, didNotAttendReason: '', waitTimeMinutes: '', text: '', informationAccurate: null, shareTextWithResource: false })
   }, [resource?.id])
 
   const ratingAvg = resource?.ratingAverage
-  const reviewCount = resource?._count?.reviews ?? 0
+  useEffect(() => {
+    if (!resourceId) {
+      setPersistedReviews([])
+      return
+    }
+    let cancelled = false
+    setReviewsLoading(true)
+    supabase
+      .from(SUPABASE_TABLE)
+      .select('*')
+      .eq('resource_id', String(resourceId))
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        setReviewsLoading(false)
+        if (error) {
+          console.warn('Supabase reviews fetch failed:', error.message)
+          setPersistedReviews([])
+          return
+        }
+        setPersistedReviews((data ?? []).map(rowToReview))
+      })
+    return () => { cancelled = true }
+  }, [resourceId])
+  const apiReviewCount = resource?._count?.reviews ?? 0
+  const reviewCount = apiReviewCount + persistedReviews.length
 
   const textTooShort = form.text.trim().length > 0 && form.text.trim().length < MIN_REVIEW_CHARS
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault()
-    if (!form.rating || textTooShort) return
-    // Build a ResourceReview object per the spec schema
-    const review = {
-      id: `local_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      deletedAt: null,
+    setSubmitError(null)
+    if (!form.rating || !resourceId || textTooShort) return
+    const payload = {
+      resource_id: String(resourceId),
       rating: form.rating,
       attended: form.attended,
-      didNotAttendReason: form.attended === false ? (form.didNotAttendReason || null) : null,
-      waitTimeMinutes: form.waitTimeMinutes ? parseInt(form.waitTimeMinutes) : null,
-      text: form.text || null,
-      informationAccurate: form.informationAccurate,
-      shareTextWithResource: form.shareTextWithResource,
-      photoUrl: null,
-      photoPublic: null,
-      authorId: 'client_anonymous',
-      resourceId: resource?.id ?? '',
-      occurrenceId: null,
-      userId: null,
-      reviewedByUserId: null,
+      did_not_attend_reason: form.attended === false ? (form.didNotAttendReason || null) : null,
+      wait_time_minutes: form.waitTimeMinutes ? parseInt(form.waitTimeMinutes, 10) : null,
+      review_text: form.text?.trim() || null,
+      information_accurate: form.informationAccurate,
+      share_text_with_resource: form.shareTextWithResource ?? false,
     }
-    setLocalReviews(prev => [review, ...prev])
+    const { data, error } = await supabase.from(SUPABASE_TABLE).insert(payload).select().single()
+    if (error) {
+      setSubmitError(error.message)
+      return
+    }
+    setPersistedReviews(prev => [rowToReview(data), ...prev])
     setSubmittedName(resource?.name ?? 'this resource')
     setSubmitted(true)
     setShowForm(false)
@@ -174,7 +220,7 @@ export default function ResourceReviews({ resource }) {
           )}
         </div>
         <div className="bg-card p-3 text-center border border-border flex flex-col justify-center">
-          <div className="text-2xl font-display font-bold text-status-info">{reviewCount + localReviews.length}</div>
+          <div className="text-2xl font-display font-bold text-status-info">{reviewCount}</div>
           <div className="text-[10px] tracking-widest uppercase font-bold text-tertiary mt-1">{t('totalReviews')}</div>
         </div>
       </div>
@@ -183,6 +229,13 @@ export default function ResourceReviews({ resource }) {
       {submitted && (
         <div className="bg-status-success/10 border border-status-success/30 p-3 text-center text-status-success text-[11px] font-bold uppercase tracking-wider">
           {t('reviewSubmitted')} — {submittedName}
+        </div>
+      )}
+
+      {/* Submit error */}
+      {submitError && (
+        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-center text-red-400 text-sm">
+          {submitError}
         </div>
       )}
 
@@ -316,15 +369,19 @@ export default function ResourceReviews({ resource }) {
         </form>
       )}
 
-      {/* Local reviews (submitted this session) */}
-      {localReviews.length > 0 && (
+      {/* Persisted reviews from Supabase */}
+      {reviewsLoading && (
+        <p className="text-[10px] font-bold tracking-widest uppercase text-tertiary text-center py-4">
+          Loading reviews…
+        </p>
+      )}
+      {!reviewsLoading && persistedReviews.length > 0 && (
         <div className="space-y-3 mt-4">
-          <h4 className="text-[10px] font-bold tracking-widest uppercase text-tertiary">SESSION REVIEWS</h4>
-          {localReviews.map(r => <ReviewCard key={r.id} review={r} />)}
+          {persistedReviews.map(r => <ReviewCard key={r.id} review={r} />)}
         </div>
       )}
 
-      {localReviews.length === 0 && reviewCount === 0 && !showForm && (
+      {!reviewsLoading && persistedReviews.length === 0 && reviewCount === 0 && !showForm && (
         <p className="text-[10px] font-bold tracking-widest uppercase text-tertiary text-center py-4 border border-dashed border-border mt-4">
           {t('noReviews')}
         </p>

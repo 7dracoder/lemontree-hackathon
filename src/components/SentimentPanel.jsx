@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react'
-import OpenAI from 'openai'
 import { TrendingUp, TrendingDown, Minus, Sparkles, Loader } from 'lucide-react'
 import { fetchResourceReviews } from '../api/lemontree'
 import { analyzeReviews, sentimentLabel } from '../utils/sentiment'
 
-const client = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY ?? '',
-  dangerouslyAllowBrowser: true,
-})
+async function chatCompletion(messages, { model = 'gpt-4o-mini', max_tokens = 400 } = {}) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, max_tokens }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? res.statusText ?? 'AI request failed')
+  }
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content ?? ''
+}
 
 function ScoreBar({ label, value, color }) {
   return (
@@ -70,12 +78,8 @@ Write a concise 2-paragraph report for a food bank manager covering:
 
 No markdown.`
 
-      const res = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: prompt }],
-      })
-      setReport(res.choices[0].message.content)
+      const content = await chatCompletion([{ role: 'user', content: prompt }], { max_tokens: 400 })
+      setReport(content)
     } catch (e) {
       setReport(`Error generating report: ${e.message}`)
     } finally {
