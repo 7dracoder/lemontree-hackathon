@@ -209,6 +209,98 @@ export default function GovDashboard() {
               <Bar dataKey="count" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+
+      <div className="bg-card border border-border p-5">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h3 className="text-sm font-display font-bold text-primary uppercase tracking-wide">
+              Pantry Need Heatmap
+            </h3>
+            <p className="text-[11px] tracking-wide uppercase text-secondary mt-1">
+              Click toggles to explore different need indicators
+            </p>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setHeatMode('snap_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Rate
+            </button>
+
+            <button
+              onClick={() => setHeatMode('poverty_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'poverty_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Poverty Rate
+            </button>
+
+            <button
+              onClick={() => setHeatMode('language_barrier_rate')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'language_barrier_rate'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Language Barrier Rate
+            </button>
+
+            <button
+              onClick={() => setHeatMode('pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Pantry Count
+            </button>
+
+            <button
+              onClick={() => setHeatMode('nearest_pantry_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'nearest_pantry_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              Distance to Pantry
+            </button>git
+
+            <button
+              onClick={() => setHeatMode('snap_vs_distance')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_vs_distance'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Distance to Pantry
+            </button>
+
+            <button
+              onClick={() => setHeatMode('snap_population_vs_pantry_count')}
+              className={`px-3 py-2 border text-xs uppercase tracking-widest ${
+                heatMode === 'snap_population_vs_pantry_count'
+                  ? 'bg-yellow-400 text-black border-yellow-400'
+                  : 'bg-transparent text-white border-border'
+              }`}
+            >
+              SNAP Pop + Pantry Count
+            </button>
           </div>
       </div>
 
