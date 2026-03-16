@@ -81,15 +81,15 @@ function isNyOrNjResource(resource) {
 }
 
 function getCoverageColor(value, breaks) {
-    if (value > breaks[3]) return '#dc2626'      // red 30k+
-    if (value > breaks[2]) return '#f97316'      // orange 20k–30k
-    if (value > breaks[1]) return '#facc15'      // yellow 10k–20k
-    if (value > breaks[0]) return '#86efac'      // light green 5k–10k
-    return '#22c55e'                             // green <=5k
+    if (value > breaks[3]) return '#dc2626'      // red 20k+
+    if (value > breaks[2]) return '#f97316'      // orange 100k–20k
+    if (value > breaks[1]) return '#facc15'      // yellow 5k–10k
+    if (value > breaks[0]) return '#86efac'      // light green 1k-5k
+    return '#22c55e'                             // green <=1k
   }
 
 function computeBreaks() {
-    return [5000, 10000, 20000, 30000]
+    return [1000, 5000, 100000, 20000]
 }
 
 function buildTightBBox(resources, padMiles = 0.75) {
@@ -441,11 +441,11 @@ export default function VoronoiCoverageMapNYNJ({
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2">
             {[
-                { color: '#22c55e', label: '≤ 5,000' },     // green
-                { color: '#86efac', label: '5k – 10k' },    // light green
-                { color: '#facc15', label: '10k – 20k' },   // yellow
-                { color: '#f97316', label: '20k – 30k' },   // orange
-                { color: '#dc2626', label: '30k+' },        // red
+                { color: '#22c55e', label: '≤ 1,000' },     // green
+                { color: '#86efac', label: '1k – 5k' },    // light green
+                { color: '#facc15', label: '5k – 10k' },   // yellow
+                { color: '#f97316', label: '10k – 20k' },   // orange
+                { color: '#dc2626', label: '20k+' },        // red
             ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2 text-[11px] uppercase tracking-wide">
                 <span
