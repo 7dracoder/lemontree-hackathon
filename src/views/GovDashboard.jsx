@@ -10,6 +10,21 @@ import HeatMapViewNYNJ from '../components/HeatMapViewNYNJ'
 import VoronoiCoverageMapNYNJ from '../components/VoronoiCoverageMapNYNJ'
 import ExportButton from '../components/ExportButton'
 import TravelBurdenPanel from '../components/TravelBurdenPanel'
+import MetricTooltip from '../components/MetricTooltip'
+
+const STATE_ABBR = {
+  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+  'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+  'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+  'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+  'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH',
+  'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC',
+  'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+  'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN',
+  'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+  'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
+}
 
 const CLUSTER_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
 const CLUSTER_LABELS_KEY = ['wellServed', 'moderateAccess', 'strained', 'foodDesert']
@@ -162,9 +177,10 @@ export default function GovDashboard() {
     const m = {}
     displayData.forEach((r) => {
       if (!r.state) return
-      if (!m[r.state]) m[r.state] = { sum: 0, count: 0 }
-      m[r.state].sum += computeBarrierIndex(r)
-      m[r.state].count++
+      const state = STATE_ABBR[r.state.trim()] ?? r.state.trim()
+      if (!m[state]) m[state] = { sum: 0, count: 0 }
+      m[state].sum += computeBarrierIndex(r)
+      m[state].count++
     })
     return Object.entries(m)
       .map(([state, v]) => ({ state, barrier: parseFloat((v.sum / v.count).toFixed(2)) }))
@@ -185,7 +201,8 @@ export default function GovDashboard() {
     const m = {}
     displayData.forEach((r) => {
       if (!r.state || (r.confidence ?? 1) >= 0.5) return
-      m[r.state] = (m[r.state] ?? 0) + 1
+      const state = STATE_ABBR[r.state.trim()] ?? r.state.trim()
+      m[state] = (m[state] ?? 0) + 1
     })
     return Object.entries(m)
       .map(([state, count]) => ({ state, count }))
@@ -194,15 +211,16 @@ export default function GovDashboard() {
   }, [displayData])
 
   const kpis = [
-    { label: 'Total Resources', value: displayData.length.toLocaleString(), ...KPI_CONFIG[0] },
+    { label: 'Total Resources', value: displayData.length.toLocaleString(), tip: 'Total number of food assistance resources currently loaded and displayed.', ...KPI_CONFIG[0] },
     {
-      label: 'Food deserts (Severely underserved areas)',
+      label: 'Food Deserts',
       value: clusterDist[3]?.count ?? 0,
       href: '#nyc-pantry-service-zones',
+      tip: 'Resources in the highest-need cluster — areas with low access, high barriers, and poor ratings.',
       ...KPI_CONFIG[1],
     },
-    { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, ...KPI_CONFIG[2] },
-    { label: 'Low Confidence', value: displayData.filter((r) => (r.confidence ?? 1) < 0.5).length, ...KPI_CONFIG[3] },
+    { label: 'At Capacity', value: `${capacityData[0]?.pct ?? 0}%`, tip: 'Percentage of resources where all occurrences are skipped or the location is closed today.', ...KPI_CONFIG[2] },
+    { label: 'Low Confidence', value: displayData.filter((r) => (r.confidence ?? 1) < 0.5).length, tip: 'Resources with a data confidence score below 50% — information may be outdated or unverified.', ...KPI_CONFIG[3] },
   ]
 
   function LegendPin({ color }) {
@@ -273,15 +291,12 @@ export default function GovDashboard() {
               <>
                 <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
                 <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">
-                    KPI_0{i + 1}
+                  <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1">
+                    {kpi.label}<MetricTooltip text={kpi.tip} />
                   </div>
                   <Icon size={14} className={`${kpi.color} opacity-80`} />
                 </div>
                 <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold">
-                  {kpi.label}
-                </div>
               </>
             )
 
@@ -335,8 +350,9 @@ export default function GovDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-card border border-border p-5">
-            <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">
+            <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
               {t('barrierIndex')} by State
+              <MetricTooltip text="Composite score (0–1) weighted across: requirement tags (30%), appointment-only access (25%), usage limits (20%), and no upcoming occurrences (25%). Higher = harder to access." />
             </h3>
             <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">
               {'// '}Higher = more barriers (0–1 scale)

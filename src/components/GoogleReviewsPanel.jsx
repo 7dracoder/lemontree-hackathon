@@ -205,7 +205,7 @@ export default function GoogleReviewsPanel({ resource }) {
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">/ 5</div>
             </div>
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 min-w-0 space-y-1">
               <StarRow rating={googleRating ?? 0} />
               <p className="text-[11px] text-gray-500">
                 {totalRatings.toLocaleString()} Google rating{totalRatings !== 1 ? 's' : ''}

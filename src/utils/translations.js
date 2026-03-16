@@ -59,7 +59,7 @@ export const translations = {
     submitBtn: 'Submit Review',
     reviewSubmitted: '✅ Thank you for your review! 🍋',
     reasonNotHelped: 'Why not?',
-    ratingAverage: 'Avg Rating',
+    ratingAverage: 'Average Rating',
     totalReviews: 'Total Reviews',
     waitTimeAvg: 'Avg Wait',
     minutes: 'min',

@@ -104,7 +104,7 @@ export default function DonorDashboard() {
     { label: 'Resources', value: data.length.toLocaleString(), tip: METRIC_TIPS.resources, ...KPI_CONFIG[0] },
     { label: t('subscriptions'), value: totalSubs.toLocaleString(), tip: METRIC_TIPS.subscriptions, ...KPI_CONFIG[1] },
     { label: t('totalReviews'), value: totalReviews.toLocaleString(), tip: METRIC_TIPS.totalReviews, ...KPI_CONFIG[2] },
-    { label: `Avg ${t('ratingAverage')}`, value: avgRating, tip: METRIC_TIPS.avgRating, ...KPI_CONFIG[3] },
+    { label: t('ratingAverage'), value: avgRating, tip: METRIC_TIPS.avgRating, ...KPI_CONFIG[3] },
   ]
 
   if (isLoading) return (
@@ -138,11 +138,10 @@ export default function DonorDashboard() {
             <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
+                <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1 min-w-0"><span className="truncate">{kpi.label}</span><MetricTooltip text={kpi.tip} /></div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
             </div>
           )
         })}
