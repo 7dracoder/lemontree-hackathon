@@ -21,30 +21,47 @@ const KPI_CONFIG = [
   { icon: Eye, accent: 'kpi-yellow', color: 'text-yellow-400', hex: '#FACC15' },
 ]
 
-function usePlacementRecommendations() {
+const LEMONTREE_STATES = [
+  { value: '', label: 'National (All)' },
+  { value: 'CA', label: 'California' },
+  { value: 'FL', label: 'Florida' },
+  { value: 'IL', label: 'Illinois' },
+  { value: 'NJ', label: 'New Jersey' },
+  { value: 'NY', label: 'New York' },
+  { value: 'PA', label: 'Pennsylvania' },
+  { value: 'TX', label: 'Texas' },
+]
+
+function usePlacementRecommendations(state) {
   const [recs, setRecs] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     async function load() {
+      const url = state
+        ? `/api/placement-recommendations?state=${state}`
+        : '/api/placement-recommendations'
       try {
-        const res = await fetch('/api/placement-recommendations')
+        const res = await fetch(url)
         if (res.ok) {
           setRecs(await res.json())
           return
         }
       } catch (_) {}
 
-      try {
-        const res = await fetch('/placement_recs.json')
-        if (res.ok) setRecs(await res.json())
-      } catch (_) {}
+      if (!state) {
+        try {
+          const res = await fetch('/placement_recs.json')
+          if (res.ok) setRecs(await res.json())
+        } catch (_) {}
+      }
 
       setLoading(false)
     }
 
     load().finally(() => setLoading(false))
-  }, [])
+  }, [state])
 
   return { recs, loading }
 }
@@ -52,9 +69,10 @@ function usePlacementRecommendations() {
 export default function GovDashboard() {
   const [heatMode, setHeatMode] = useState('snap_rate')
   const [nyHeatMode, setNyHeatMode] = useState('snap_rate')
+  const [recState, setRecState] = useState('')
 
   const { data, isLoading, progress } = useFilteredResources({})
-  const { recs, loading: recsLoading } = usePlacementRecommendations()
+  const { recs, loading: recsLoading } = usePlacementRecommendations(recState)
   const { t, lang } = useTranslation()
   const clusterMap = useMemo(() => clusterResources(data), [data])
 
@@ -418,11 +436,22 @@ export default function GovDashboard() {
               {'// '}ML-ranked zip codes · SHAP-weighted need score
             </p>
           </div>
-          {!recsLoading && recs[0]?.model_r2 != null && (
-            <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
-              Model R² {recs[0].model_r2.toFixed(3)}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {!recsLoading && recs[0]?.model_r2 != null && (
+              <span className="text-[10px] tracking-widest uppercase text-tertiary font-bold">
+                Model R² {recs[0].model_r2.toFixed(3)}
+              </span>
+            )}
+            <select
+              value={recState}
+              onChange={(e) => setRecState(e.target.value)}
+              className="text-[11px] bg-surface border border-border text-primary rounded px-2 py-1 uppercase tracking-wide"
+            >
+              {LEMONTREE_STATES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
         {recsLoading ? (
           <div className="p-6 text-[11px] text-secondary uppercase tracking-widest animate-pulse">Loading...</div>

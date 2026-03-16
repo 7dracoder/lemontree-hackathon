@@ -1,4 +1,5 @@
 import { MapContainer, TileLayer, Circle, Marker, Tooltip, useMap } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
@@ -366,8 +367,6 @@ export default function HeatMapView({
         />
 
         <FlyToCenter center={center} zoom={zoom} shouldFly={false} />
-
-import MarkerClusterGroup from 'react-leaflet-cluster'
 
         <SnapLayer rows={rows} mode={mode} />
 
