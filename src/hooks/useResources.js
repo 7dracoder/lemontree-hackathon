@@ -11,7 +11,7 @@ export function useResources() {
     queryFn: async () => {
       let all = []
       let skip = 0
-      const take = 1500
+      const take = 200
       const MAX = 5000
 
       const firstPage = await fetchResources({ take, skip })
