@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/resources/:path*",
-      "destination": "https://platform.foodhelpline.org/api/resources/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://platform.foodhelpline.org/api/$1"
     },
     {
       "source": "/(.*)",
