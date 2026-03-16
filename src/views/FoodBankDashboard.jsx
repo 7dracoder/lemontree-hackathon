@@ -59,7 +59,9 @@ export default function FoodBankDashboard() {
   const { setExportState } = useExport()
 
   useEffect(() => {
-    setExportState({ data, dashboardId: 'foodbank-dashboard' })
+    if (data && data.length > 0) {
+      setExportState({ data, dashboardId: 'foodbank-dashboard' })
+    }
   }, [data, setExportState])
 
   const ratingDist = useMemo(() => {
@@ -136,7 +138,7 @@ export default function FoodBankDashboard() {
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 animate-fade-in">
       <div className="w-72 h-4 bg-gray-600 rounded-full overflow-hidden">
-      <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
+        <div className="h-full bg-yellow-400 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
       </div>
       <p className="text-secondary tracking-widest uppercase font-bold text-[10px] animate-pulse">SYS_LOADING {progress}%</p>
     </div>
@@ -163,7 +165,7 @@ export default function FoodBankDashboard() {
             <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1 min-w-0"><span className="truncate">{kpi.label}</span><MetricTooltip text={kpi.tip} /></div>
+                <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1 min-w-0"><span className="truncate">{kpi.label}</span><MetricTooltip text={kpi.tip} side="bottom" /></div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
@@ -181,10 +183,7 @@ export default function FoodBankDashboard() {
             <BarChart data={ratingDist}>
               <XAxis dataKey="stars" tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip 
-                contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
-                itemStyle={{ color: 'var(--color-primary)' }}
-              />
+              <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
               <Bar dataKey="count" fill="#facc15" radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -230,11 +229,10 @@ export default function FoodBankDashboard() {
                 <button
                   key={mode}
                   onClick={() => setMapColorMode(mode)}
-                  className={`text-[10px] font-bold tracking-widest uppercase px-3 py-2 border transition-colors text-left ${
-                    mapColorMode === mode
+                  className={`text-[10px] font-bold tracking-widest uppercase px-3 py-2 border transition-colors text-left ${mapColorMode === mode
                       ? 'border-accent text-accent bg-accent/10'
                       : 'border-border text-secondary hover:border-accent hover:text-accent'
-                  }`}
+                    }`}
                 >
                   {label}
                 </button>
@@ -275,9 +273,8 @@ export default function FoodBankDashboard() {
                   <tr
                     key={r.id}
                     onClick={() => setSelectedResource(r)}
-                    className={`cursor-pointer transition-colors ${
-                      selectedResource?.id === r.id ? 'bg-surface border-l-2 border-accent' : 'hover:bg-surface border-l-2 border-transparent'
-                    }`}
+                    className={`cursor-pointer transition-colors ${selectedResource?.id === r.id ? 'bg-surface border-l-2 border-accent' : 'hover:bg-surface border-l-2 border-transparent'
+                      }`}
                   >
                     <td className="px-4 py-3 text-primary truncate max-w-[160px] font-semibold tracking-wide uppercase">{r.name ?? '—'}</td>
                     <td className="px-4 py-3 text-secondary tracking-wide uppercase">{r.city ?? '—'}</td>
@@ -452,11 +449,10 @@ export default function FoodBankDashboard() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => !flyerTarget && e.preventDefault()}
-            className={`flex items-center gap-2 px-5 py-3 text-[10px] font-bold tracking-widest uppercase border transition-colors whitespace-nowrap ${
-              flyerTarget
+            className={`flex items-center gap-2 px-5 py-3 text-[10px] font-bold tracking-widest uppercase border transition-colors whitespace-nowrap ${flyerTarget
                 ? 'border-accent text-accent bg-accent/10 hover:bg-accent hover:text-page'
                 : 'border-border text-tertiary cursor-not-allowed opacity-50'
-            }`}
+              }`}
           >
             <Download size={13} /> {t('downloadFlyer')}
           </a>

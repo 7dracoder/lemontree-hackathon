@@ -53,19 +53,6 @@ const LEMONTREE_STATES = [
   { value: 'TX', label: 'Texas' },
 ]
 
-function generateExplanation(rec) {
-  if (rec.explanation) return rec.explanation
-  const parts = []
-  if (rec.coverage_gap != null) {
-    const pct = (rec.coverage_gap * 100).toFixed(0)
-    parts.push(rec.coverage_gap >= 0.9 ? `${pct}% coverage gap — essentially no pantry access` : `${pct}% coverage gap`)
-  }
-  if (rec.pantry_count_nearby === 0) parts.push('no pantries within service radius')
-  else if (rec.pantry_count_nearby != null) parts.push(`${rec.pantry_count_nearby} nearby pantry${rec.pantry_count_nearby !== 1 ? 's' : ''}`)
-  if (rec.snap_households != null) parts.push(`${rec.snap_households.toLocaleString()} SNAP households`)
-  return parts.length ? parts.join(' · ') : 'High-need zip code identified by placement model'
-}
-
 function usePlacementRecommendations(state) {
   const [recs, setRecs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -83,28 +70,25 @@ function usePlacementRecommendations(state) {
             .limit(5)
           if (scores?.length) {
             const zips = scores.map((r) => r.zip)
-            const [{ data: geo }, { data: demo }] = await Promise.all([
-              _supabase.from('zip_coverage_gap').select('zip, zip_lat, zip_lon, coverage_gap, pantry_count_nearby').in('zip', zips),
-              _supabase.from('zip_demographics').select('zip, snap_households').in('zip', zips),
-            ])
+            const { data: geo } = await _supabase
+              .from('zip_coverage_gap')
+              .select('zip, zip_lat, zip_lon, coverage_gap, pantry_count_nearby')
+              .in('zip', zips)
             const geoMap = Object.fromEntries((geo || []).map((g) => [g.zip, g]))
-            const demoMap = Object.fromEntries((demo || []).map((d) => [d.zip, d]))
             setRecs(scores.map((r) => {
               const g = geoMap[r.zip]
-              const d = demoMap[r.zip]
               return {
                 ...r,
                 zip_lat: g?.zip_lat != null ? Number(g.zip_lat) : null,
                 zip_lon: g?.zip_lon != null ? Number(g.zip_lon) : null,
                 coverage_gap: g?.coverage_gap ?? null,
                 pantry_count_nearby: g?.pantry_count_nearby ?? null,
-                snap_households: d?.snap_households ?? null,
               }
             }))
             setLoading(false)
             return
           }
-        } catch (_) {}
+        } catch (_) { }
       }
       const url = '/api/placement-recommendations'
       try {
@@ -113,13 +97,13 @@ function usePlacementRecommendations(state) {
           setRecs(await res.json())
           return
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (!state) {
         try {
           const res = await fetch('/placement_recs.json')
           if (res.ok) setRecs(await res.json())
-        } catch (_) {}
+        } catch (_) { }
       }
 
       setLoading(false)
@@ -193,7 +177,9 @@ export default function GovDashboard() {
   }, [])
 
   useEffect(() => {
-    setExportState({ data: displayData, dashboardId: 'gov-dashboard' })
+    if (displayData && displayData.length > 0) {
+      setExportState({ data: displayData, dashboardId: 'gov-dashboard' })
+    }
   }, [displayData, setExportState])
 
   const barrierMap = useMemo(() => {
@@ -350,7 +336,7 @@ export default function GovDashboard() {
                 <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
                 <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
                   <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1">
-                    {kpi.label}<MetricTooltip text={kpi.tip} />
+                    {kpi.label}<MetricTooltip text={kpi.tip} side="bottom" />
                   </div>
                   <Icon size={14} className={`${kpi.color} opacity-80`} />
                 </div>
@@ -387,11 +373,10 @@ export default function GovDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-2.5 text-xs font-bold tracking-widest uppercase transition-all duration-200 border-r border-border last:border-r-0 flex items-center gap-2 ${
-                activeTab === tab.id
+              className={`px-6 py-2.5 text-xs font-bold tracking-widest uppercase transition-all duration-200 border-r border-border last:border-r-0 flex items-center gap-2 ${activeTab === tab.id
                   ? 'bg-accent/15 text-accent border-b-2 border-b-accent'
                   : 'text-secondary hover:text-primary hover:bg-surface'
-              }`}
+                }`}
             >
               <span className="text-tertiary">0{i + 1}</span> {tab.label}
             </button>
@@ -437,7 +422,7 @@ export default function GovDashboard() {
                 <BarChart data={barrierByState}>
                   <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 1]} tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
                     itemStyle={{ color: 'var(--color-primary)' }}
                   />
@@ -462,10 +447,7 @@ export default function GovDashboard() {
                 <BarChart data={lowConfidenceByState}>
                   <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono', color: 'var(--color-primary)' }}
-                    itemStyle={{ color: 'var(--color-primary)' }}
-                  />
+                  <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-accent)', borderRadius: 0, fontFamily: 'JetBrains Mono' }} />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -574,7 +556,7 @@ export default function GovDashboard() {
                           <div className="font-bold text-secondary">{rec.pantry_count_nearby ?? 0}</div>
                         </div>
                       </div>
-                      <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{generateExplanation(rec)}</div>
+                      <div className="text-[11px] text-secondary md:max-w-xs tracking-wide">{rec.explanation}</div>
                     </div>
                   ))}
                 </div>

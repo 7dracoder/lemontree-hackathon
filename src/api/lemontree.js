@@ -1,4 +1,4 @@
-const BASE = '';
+const BASE = 'https://platform.foodhelpline.org';
 // Parse superjson wire format — use raw.json directly (Option B from the API guide)
 function parse(raw) {
   return raw.json ?? raw
@@ -119,7 +119,7 @@ export async function fetchResourceReviews(id) {
       const extra = fromApi.filter(r => !seen.has(r.id))
       return [...fromSupabase, ...extra]
     }
-  } catch (_) {}
+  } catch (_) { }
   const seeded = await getSeededReviews()
   const fromSeeded = seeded[String(id)] ?? []
   const seen = new Set(fromSupabase.map(r => r.id))

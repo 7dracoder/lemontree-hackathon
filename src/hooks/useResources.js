@@ -3,31 +3,32 @@ import { useMemo, useState } from 'react'
 import { fetchResources } from '../api/lemontree'
 import { computeRiskScore } from '../utils/mlScoring'
 
+const STABLE_EMPTY_ARRAY = []
+
 export function useResources() {
   const [progress, setProgress] = useState(0)
 
-  const { data: raw = [], isLoading, error } = useQuery({
+  const { data: raw = STABLE_EMPTY_ARRAY, isLoading, error } = useQuery({
     queryKey: ['resources-all'],
     queryFn: async () => {
       let all = []
-      let skip = 0
+      let nextCursor = null
       const take = 200
-      const MAX = 5000
 
-      const firstPage = await fetchResources({ take, skip })
+      const firstPage = await fetchResources({ take })
       const firstResources = firstPage.resources ?? []
-      const total = Math.min(firstPage.count ?? 0, MAX)
+      const total = firstPage.count ?? 0
       all = [...all, ...firstResources]
+      nextCursor = firstPage.cursor
       setProgress(Math.min(100, Math.round((all.length / Math.max(total, 1)) * 100)))
-      skip += take
 
-      while (all.length < MAX && all.length < (firstPage.count ?? Infinity)) {
-        const data = await fetchResources({ take, skip })
+      while (nextCursor && all.length < total) {
+        const data = await fetchResources({ take, cursor: nextCursor })
         const resources = data.resources ?? []
         if (resources.length === 0) break
         all = [...all, ...resources]
+        nextCursor = data.cursor
         setProgress(Math.min(100, Math.round((all.length / Math.max(total, 1)) * 100)))
-        skip += take
       }
 
       // Deduplicate by id in case the API returns overlapping pages

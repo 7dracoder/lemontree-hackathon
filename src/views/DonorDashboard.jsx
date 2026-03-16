@@ -144,7 +144,7 @@ export default function DonorDashboard() {
             <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
               <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
-                <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1 min-w-0"><span className="truncate">{kpi.label}</span><MetricTooltip text={kpi.tip} /></div>
+                <div className="text-sm font-display font-bold uppercase tracking-wide text-primary flex items-center gap-1 min-w-0"><span className="truncate">{kpi.label}</span><MetricTooltip text={kpi.tip} side="bottom" /></div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
