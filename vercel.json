@@ -5,6 +5,18 @@
       "destination": "/api/ai"
     },
     {
+      "source": "/api/zip-demographics",
+      "destination": "/api/zip-demographics"
+    },
+    {
+      "source": "/api/placement-recommendations",
+      "destination": "/api/placement-recommendations"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://platform.foodhelpline.org/api/:path*"
+    },
+    {
       "source": "/maps/:path*",
       "destination": "https://maps.googleapis.com/:path*"
     },
