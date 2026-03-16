@@ -121,7 +121,6 @@ export default function GovDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
-<<<<<<< HEAD
 
           return (
             <div
@@ -132,16 +131,10 @@ export default function GovDashboard() {
                 className="absolute left-0 top-0 bottom-0 w-1"
                 style={{ backgroundColor: kpi.hex }}
               />
-=======
-          return (
-            <div key={kpi.label} className={`bg-card border border-border p-5 relative animate-fade-in-up stagger-${i + 1} hover:border-accent transition-colors`}>
-              <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: kpi.hex }} />
->>>>>>> TS_1
               <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
                 <div className="text-[10px] font-bold tracking-widest uppercase text-tertiary">KPI_0{i + 1}</div>
                 <Icon size={14} className={`${kpi.color} opacity-80`} />
               </div>
-<<<<<<< HEAD
               <div className={`text-3xl font-display font-bold ${kpi.color}`}>
                 {kpi.value}
               </div>
@@ -149,10 +142,6 @@ export default function GovDashboard() {
                 {kpi.label}
                 <MetricTooltip text={kpi.tip} />
               </div>
-=======
-              <div className={`text-3xl font-display font-bold ${kpi.color}`}>{kpi.value}</div>
-              <div className="text-[11px] text-secondary mt-2 tracking-wide uppercase font-semibold flex items-center">{kpi.label}<MetricTooltip text={kpi.tip} /></div>
->>>>>>> TS_1
             </div>
           )
         })}
@@ -179,7 +168,6 @@ export default function GovDashboard() {
       {/* Bar Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-5">
-<<<<<<< HEAD
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
             {t('barrierIndex')} by State
             <MetricTooltip text={METRIC_TIPS.barrier} />
@@ -189,10 +177,6 @@ export default function GovDashboard() {
             {'// '}Higher = more barriers (0–1 scale)
           </p>
 
-=======
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">{t('barrierIndex')} by State<MetricTooltip text={METRIC_TIPS.barrier} /></h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Higher = more barriers (0–1 scale)</p>
->>>>>>> TS_1
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={barrierByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -208,7 +192,6 @@ export default function GovDashboard() {
         </div>
 
         <div className="bg-card border border-border p-5">
-<<<<<<< HEAD
           <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">
             States with Most Unverified Resources
             <MetricTooltip text={METRIC_TIPS.unverified} />
@@ -218,10 +201,6 @@ export default function GovDashboard() {
             {'// '}Low confidence (&lt;0.5) resources by state
           </p>
 
-=======
-          <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide flex items-center">States with Most Unverified Resources<MetricTooltip text={METRIC_TIPS.unverified} /></h3>
-          <p className="text-[11px] tracking-wide uppercase text-secondary mb-5">{'// '}Low confidence (&lt;0.5) resources by state</p>
->>>>>>> TS_1
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={lowConfidenceByState}>
               <XAxis dataKey="state" tick={{ fill: '#71717A', fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -233,12 +212,8 @@ export default function GovDashboard() {
           </div>
       </div>
 
-<<<<<<< HEAD
 
 
-=======
-      {/* Map */}
->>>>>>> TS_1
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-1 uppercase tracking-wide">🗺️ {t('mapTitle')} — Food Desert Zones</h3>
         <div className="flex gap-4 mb-3 flex-wrap">
@@ -289,16 +264,10 @@ export default function GovDashboard() {
           </table>
         </div>
       </div>
-<<<<<<< HEAD
 
       <div className="chart-card">
         <TravelBurdenPanel resources={data} />
       </div>
-=======
-      {/* Travel Burden Analysis */}
-      <TravelBurdenPanel resources={data} />
-      
->>>>>>> TS_1
     </div>
   )
 }
