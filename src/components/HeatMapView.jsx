@@ -1,7 +1,6 @@
 import { MapContainer, TileLayer, Circle, Marker, Tooltip, useMap } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
-import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { getRiskLabel } from '../utils/mlScoring'
