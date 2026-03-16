@@ -1,5 +1,6 @@
 import { MapContainer, TileLayer, Circle, CircleMarker, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { getRiskLabel } from '../utils/mlScoring'
@@ -369,8 +370,6 @@ export default function HeatMapViewNYNJ({
         />
 
         <FlyToCenter center={center} zoom={zoom} shouldFly={false} />
-
-import MarkerClusterGroup from 'react-leaflet-cluster'
 
         <SnapLayer rows={rows} mode={mode} />
 
