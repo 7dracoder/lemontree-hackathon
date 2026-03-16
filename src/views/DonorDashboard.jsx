@@ -45,6 +45,7 @@ const KPI_CONFIG = [
 
 export default function DonorDashboard() {
   const [filters, setFilters] = useState({})
+  const [mapColorMode, setMapColorMode] = useState('risk')
   const { data, all, isLoading, progress } = useFilteredResources(filters)
   const { t, lang } = useTranslation()
   const { setExportState } = useExport()
@@ -77,6 +78,19 @@ export default function DonorDashboard() {
     })
     return Object.entries(m).map(([name, value]) => ({ name, value }))
   }, [data, lang])
+
+  const typeColorMap = useMemo(() => {
+    const seen = new Map()
+    data.forEach(r => {
+      const name = r.resourceType?.name
+      if (name && !seen.has(name)) seen.set(name, COLORS[seen.size % COLORS.length])
+    })
+    return Object.fromEntries(seen)
+  }, [data])
+
+  const mapLegend = mapColorMode === 'risk'
+    ? [{ color: '#22C55E', label: 'Low Risk' }, { color: '#FACC15', label: 'Med Risk' }, { color: '#EF4444', label: 'High Risk' }]
+    : Object.entries(typeColorMap).slice(0, 8).map(([label, color]) => ({ color, label }))
 
   const ratingBuckets = useMemo(() => {
     const bins = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
@@ -170,7 +184,36 @@ export default function DonorDashboard() {
 
       <div className="bg-card border border-border p-5">
         <h3 className="text-sm font-display font-bold text-primary mb-4 uppercase tracking-wide">🗺️ {t('mapTitle')}</h3>
-        <MapView resources={data} height="360px" />
+        <div className="flex gap-4">
+          <div className="flex-1 min-w-0">
+            <MapView resources={data} height="360px" colorMode={mapColorMode} typeColorMap={typeColorMap} />
+          </div>
+          <div className="w-44 shrink-0 flex flex-col gap-4 pt-1">
+            <div className="flex flex-col gap-1">
+              {[['risk', 'Reliability'], ['type', 'Type']].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => setMapColorMode(mode)}
+                  className={`text-[10px] font-bold tracking-widest uppercase px-3 py-2 border transition-colors text-left ${
+                    mapColorMode === mode
+                      ? 'border-accent text-accent bg-accent/10'
+                      : 'border-border text-secondary hover:border-accent hover:text-accent'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {mapLegend.map(item => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-[10px] font-mono tracking-wide uppercase text-secondary truncate">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Resource Table + Rating Distribution */}

@@ -15,7 +15,7 @@ function FlyToCenter({ center, zoom, shouldFly }) {
   return null
 }
 
-export default function MapView({ resources, clusterMap = {}, placementRecs = [], height = '400px' }) {
+export default function MapView({ resources, clusterMap = {}, placementRecs = [], height = '400px', colorMode = 'risk', typeColorMap = {} }) {
   const { t, lang } = useTranslation()
   const valid = resources.filter(r => r.latitude && r.longitude)
 
@@ -55,8 +55,9 @@ export default function MapView({ resources, clusterMap = {}, placementRecs = []
         ))}
         {valid.map(r => {
           const cluster = clusterMap[r.id]
-          const { color } = getRiskLabel(r.riskScore ?? 0)
-          const fillColor = cluster?.color ?? color
+          const { color: riskColor } = getRiskLabel(r.riskScore ?? 0)
+          const typeKey = r.resourceType?.name ?? ''
+          const fillColor = cluster?.color ?? (colorMode === 'type' ? (typeColorMap[typeKey] ?? '#71717A') : riskColor)
           const typeName = lang === 'es'
             ? (r.resourceType?.name_es ?? r.resourceType?.name ?? '')
             : (r.resourceType?.name ?? '')
